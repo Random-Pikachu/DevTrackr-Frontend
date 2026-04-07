@@ -6,7 +6,11 @@ const navItems = [
   { label: 'How it works', href: '#launchpad' },
 ]
 
-export function SiteHeader() {
+type SiteHeaderProps = {
+  onGetStarted: () => void
+}
+
+export function SiteHeader({ onGetStarted }: SiteHeaderProps) {
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-black/80 backdrop-blur-sm">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6 md:px-8">
@@ -33,12 +37,13 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <a
+        <button
           className="inline-flex min-h-11 items-center justify-center rounded-full bg-white px-6 text-sm font-semibold !text-black transition hover:bg-white/90"
-  
+          onClick={onGetStarted}
+          type="button"
         >
           Get started
-        </a>
+        </button>
       </div>
     </header>
   )

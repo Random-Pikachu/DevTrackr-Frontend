@@ -50,12 +50,16 @@ const integrationCards = [
   },
 ]
 
-export default function HomePage() {
+type HomePageProps = {
+  onGetStarted: () => void
+}
+
+export default function HomePage({ onGetStarted }: HomePageProps) {
   return (
     <div className="min-h-screen bg-black text-white">
-      <SiteHeader />
+      <SiteHeader onGetStarted={onGetStarted} />
       <main>
-        <HeroSection />
+        <HeroSection onGetStarted={onGetStarted} />
         <SignalSection cards={signalCards} />
         <IntegrationsSection integrations={integrationCards} />
         <ClosingSection />

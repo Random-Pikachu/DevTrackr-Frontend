@@ -5,7 +5,11 @@ const feedRows = [
   { label: 'Unified streak', value: '19 days' },
 ]
 
-export function HeroSection() {
+type HeroSectionProps = {
+  onGetStarted: () => void
+}
+
+export function HeroSection({ onGetStarted }: HeroSectionProps) {
   return (
     <section className="mx-auto max-w-7xl px-6 pb-32 pt-24 md:px-8" id="top">
       <div className="grid items-center gap-16 md:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
@@ -19,12 +23,13 @@ export function HeroSection() {
           
 
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-            <a
+            <button
               className="inline-flex min-h-14 items-center justify-center rounded-full bg-white px-8 text-base font-semibold !text-black transition hover:bg-white/90"
-              
+              onClick={onGetStarted}
+              type="button"
             >
               Get started
-            </a>
+            </button>
           </div>
         </div>
 

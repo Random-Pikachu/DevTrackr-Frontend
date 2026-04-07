@@ -23,6 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
+.env
+
 # Local project notes / tooling
 description.md
 Design.md

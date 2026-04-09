@@ -181,7 +181,6 @@ export default function App() {
           requestedUsername={route.username}
           profileDraft={profileDraft}
           authSession={authSession}
-          onRestart={() => navigate('/onboarding')}
         />
       )
 

@@ -16,14 +16,12 @@ type ProfilePageProps = {
   requestedUsername: string
   profileDraft: ProfileDraft
   authSession: AuthSession
-  onRestart: () => void
 }
 
 export function ProfilePage({
   requestedUsername,
   profileDraft,
   authSession,
-  onRestart,
 }: ProfilePageProps) {
   const username =
     authSession.publicSlug ||
@@ -33,6 +31,12 @@ export function ProfilePage({
 
   const [profileUser, setProfileUser] = useState<BackendUser | null>(null)
   const [heatmapDays, setHeatmapDays] = useState<BackendHeatmapDay[]>([])
+  const [hoveredDay, setHoveredDay] = useState<{
+    date: string
+    total: number
+    x: number
+    y: number
+  } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -120,7 +124,6 @@ export function ProfilePage({
     username ||
     requestedUsername
 
-  const githubHandle = profileUser?.githubHandle || authSession.githubHandle
 
   return (
     <main className="page-shell min-h-screen bg-black px-6 py-10 text-white">
@@ -132,24 +135,15 @@ export function ProfilePage({
                 /@{headingUsername}
               </p>
               <h1 className="mt-4 text-4xl font-bold tracking-[-0.06em] text-black md:text-6xl">
-                GitHub activity from January to December {yearRange.label}.
+                One annual contribution map for GitHub, LeetCode, and Codeforces in {yearRange.label}.
               </h1>
               <p className="mt-5 max-w-xl text-base leading-8 text-black/60">
-                A year-wide contribution view powered by your backend heatmap API.
+                Refreshed from your latest aggregated backend metrics so each square reflects the full DevTrackr activity mix.
               </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <span className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white">
-                {githubHandle || 'GitHub linked'}
-              </span>
-              <span className="rounded-full bg-[#f4ede6] px-4 py-2 text-sm font-semibold text-[#8e4b10]">
-                Pastel orange scale
-              </span>
             </div>
           </div>
 
-          <div className="heatmap-shell mt-10 overflow-x-auto rounded-[32px] bg-[#fff8f2] px-4 py-6 md:px-6">
+          <div className="heatmap-shell relative mt-10 overflow-x-auto rounded-[32px] bg-[#fff8f2] px-4 py-6 md:px-6">
             {isLoading ? (
               <div className="flex h-[220px] min-w-[760px] items-center justify-center rounded-[24px] border border-[#f0dcc9] bg-white text-sm text-black/55">
                 Loading yearly activity...
@@ -198,40 +192,45 @@ export function ProfilePage({
                   ]}
                   showWeekdayLabels
                   startDate={yearRange.start}
-                  titleForValue={(value) => {
+                  onMouseLeave={() => {
+                    setHoveredDay(null)
+                  }}
+                  onMouseOver={(event, value) => {
                     if (!value?.date) {
-                      return 'No GitHub activity'
+                      setHoveredDay(null)
+                      return
                     }
 
-                    const commitCount = value.count || 0
-                    return `${value.date}: ${commitCount} GitHub commit${commitCount === 1 ? '' : 's'}`
+                    const rect = event.currentTarget.getBoundingClientRect()
+
+                    setHoveredDay({
+                      date: String(value.date),
+                      total: Number(value.total || 0),
+                      x: rect.left + rect.width / 2,
+                      y: rect.top,
+                    })
                   }}
                   values={heatmapValues}
                   weekdayLabels={['Sun', '', 'Tue', '', 'Thu', '', 'Sat']}
                 />
               </div>
             )}
+
+            {hoveredDay ? (
+              <div
+                className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-[calc(100%+14px)] rounded-[20px] border border-[#f0dcc9] bg-white px-4 py-3 text-sm font-semibold text-black shadow-[0_18px_40px_rgba(0,0,0,0.14)]"
+                style={{
+                  left: hoveredDay.x,
+                  top: hoveredDay.y,
+                }}
+              >
+                {hoveredDay.date}: {hoveredDay.total} Total Contribution
+                {hoveredDay.total === 1 ? '' : 's'}
+              </div>
+            ) : null}
           </div>
         </section>
 
-        <section className="rounded-[40px] border border-white/10 bg-white px-8 py-14 text-center text-black shadow-[0_24px_70px_rgba(0,0,0,0.35)]">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-black/45">
-            Profile
-          </p>
-          <h2 className="mt-6 text-5xl font-bold tracking-[-0.06em] text-black md:text-7xl">
-            Hello WOorld
-          </h2>
-          <p className="mx-auto mt-6 max-w-xl text-base leading-8 text-black/60">
-            Your route is now backed by backend user identity and yearly activity data.
-          </p>
-          <button
-            className="mt-10 inline-flex min-h-13 items-center justify-center rounded-full bg-black px-7 text-sm font-semibold text-white transition hover:bg-[#1c1c1c]"
-            onClick={onRestart}
-            type="button"
-          >
-            Edit profile
-          </button>
-        </section>
       </div>
     </main>
   )

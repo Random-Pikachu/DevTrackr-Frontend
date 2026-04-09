@@ -13,6 +13,8 @@ export type AuthSession = {
   githubHandle?: string
   email?: string
   backendUserId?: string
+  backendUsername?: string
+  publicSlug?: string
   accessToken?: string
   connectedAt?: string
   error?: string
@@ -30,6 +32,7 @@ export type ProfileDraft = {
 export type BackendSyncResult = {
   ok: boolean
   userId?: string
+  routeUsername?: string
   warning?: string
 }
 
@@ -42,4 +45,48 @@ export type AuthPopupPayload = {
   token?: string
   userId?: string
   error?: string
+}
+
+export type BackendNullableString = {
+  String: string
+  Valid: boolean
+}
+
+export type BackendUserRecord = {
+  id: string
+  username?: BackendNullableString
+  github_handle?: BackendNullableString
+  leetcode_handle?: BackendNullableString
+  codeforces_handle?: BackendNullableString
+  email: string
+  public_slug?: BackendNullableString
+  profile_public?: boolean
+}
+
+export type BackendUser = {
+  id: string
+  email: string
+  username?: string
+  githubHandle?: string
+  leetcodeHandle?: string
+  codeforcesHandle?: string
+  publicSlug?: string
+  profilePublic?: boolean
+}
+
+export type BackendHeatmapDay = {
+  date: string
+  total_contributions: number
+  github_commits: number
+  lc_easy_solved: number
+  lc_medium_solved: number
+  lc_hard_solved: number
+  cf_problems_solved: number
+}
+
+export type BackendHeatmapResponse = {
+  user_id: string
+  start: string
+  end: string
+  days: BackendHeatmapDay[]
 }

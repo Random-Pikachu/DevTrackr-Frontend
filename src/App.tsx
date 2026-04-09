@@ -134,7 +134,14 @@ export default function App() {
         : nextDraft
 
     handleProfileDraftChange(syncedDraft)
-    navigate(`/@${encodeURIComponent(nextDraft.username)}`)
+
+    if (result.routeUsername) {
+      handleAuthSessionUpdate({
+        backendUsername: result.routeUsername,
+        publicSlug: result.routeUsername,
+      })
+      navigate(`/@${encodeURIComponent(result.routeUsername)}`)
+    }
 
     return result
   }
@@ -173,6 +180,7 @@ export default function App() {
         <ProfilePage
           requestedUsername={route.username}
           profileDraft={profileDraft}
+          authSession={authSession}
           onRestart={() => navigate('/onboarding')}
         />
       )

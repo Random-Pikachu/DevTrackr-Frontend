@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+@import "react-calendar-heatmap/dist/styles.css";
 @import "tailwindcss";
 
 * {
@@ -66,4 +67,41 @@ a {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+.heatmap-shell .react-calendar-heatmap {
+  width: 100%;
+}
+
+.heatmap-shell .react-calendar-heatmap text {
+  fill: rgba(0, 0, 0, 0.48);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.heatmap-shell .react-calendar-heatmap rect {
+  rx: 3px;
+  ry: 3px;
+  stroke: rgba(244, 217, 189, 0.9);
+  stroke-width: 1px;
+}
+
+.heatmap-shell .react-calendar-heatmap .heat-empty {
+  fill: #fff2e5;
+}
+
+.heatmap-shell .react-calendar-heatmap .heat-level-1 {
+  fill: #ffd8b8;
+}
+
+.heatmap-shell .react-calendar-heatmap .heat-level-2 {
+  fill: #fcbf91;
+}
+
+.heatmap-shell .react-calendar-heatmap .heat-level-3 {
+  fill: #f29d63;
+}
+
+.heatmap-shell .react-calendar-heatmap .heat-level-4 {
+  fill: #e9853f;
 }

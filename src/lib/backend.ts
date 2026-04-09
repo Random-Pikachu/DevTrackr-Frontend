@@ -1,24 +1,27 @@
-import type { AuthSession, BackendSyncResult, ProfileDraft } from '../types/app'
+import type {
+  AuthSession,
+  BackendHeatmapResponse,
+  BackendNullableString,
+  BackendSyncResult,
+  BackendUser,
+  BackendUserRecord,
+  ProfileDraft,
+} from '../types/app'
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:8080'
-
-type UserRecord = {
-  id?: string
-  user_id?: string
-}
+  import.meta.env.VITE_API_BASE_URL?.trim() || '/api'
 
 type SyncProfileParams = {
   authSession: AuthSession
   profileDraft: ProfileDraft
 }
 
-function getTimezone() {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-}
+function getNullableStringValue(field?: BackendNullableString) {
+  if (!field?.Valid) {
+    return undefined
+  }
 
-function getUserId(user: UserRecord | null) {
-  return user?.id ?? user?.user_id
+  return field.String || undefined
 }
 
 async function readResponseBody<T>(response: Response): Promise<T | null> {
@@ -31,41 +34,26 @@ async function readResponseBody<T>(response: Response): Promise<T | null> {
   return (await response.json()) as T
 }
 
-async function createUser(email: string) {
-  const response = await fetch(`${API_BASE_URL}/users`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      email,
-      email_frequency: 'daily',
-      timezone: getTimezone(),
-      digest_time: '20:00',
-      email_opt_in: true,
-      profile_public: true,
-    }),
-  })
-
-  if (response.ok) {
-    return await readResponseBody<UserRecord>(response)
+function normalizeUser(user: BackendUserRecord): BackendUser {
+  return {
+    id: user.id,
+    email: user.email,
+    username: getNullableStringValue(user.username),
+    githubHandle: getNullableStringValue(user.github_handle),
+    leetcodeHandle: getNullableStringValue(user.leetcode_handle),
+    codeforcesHandle: getNullableStringValue(user.codeforces_handle),
+    publicSlug: getNullableStringValue(user.public_slug),
+    profilePublic: user.profile_public,
   }
+}
 
-  if (response.status === 409) {
-    return null
-  }
-
-  const errorText = await response.text()
-  throw new Error(errorText || 'Unable to create user.')
+function getRouteUsername(user: BackendUser | null) {
+  return user?.publicSlug || user?.username
 }
 
 async function fetchUserByEmail(email: string) {
   const response = await fetch(
     `${API_BASE_URL}/users/by-email?email=${encodeURIComponent(email)}`,
-    {
-      credentials: 'include',
-    },
   )
 
   if (!response.ok) {
@@ -73,7 +61,67 @@ async function fetchUserByEmail(email: string) {
     throw new Error(errorText || 'Unable to fetch user by email.')
   }
 
-  return await readResponseBody<UserRecord>(response)
+  const user = await readResponseBody<BackendUserRecord>(response)
+  return user ? normalizeUser(user) : null
+}
+
+async function fetchUserByUsername(username: string) {
+  const response = await fetch(
+    `${API_BASE_URL}/users/by-username?username=${encodeURIComponent(username)}`,
+  )
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(errorText || 'Unable to fetch user by username.')
+  }
+
+  const user = await readResponseBody<BackendUserRecord>(response)
+  return user ? normalizeUser(user) : null
+}
+
+async function fetchUserHeatmap(userId: string, start: string, end: string) {
+  const response = await fetch(
+    `${API_BASE_URL}/users/${userId}/heatmap?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`,
+  )
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(errorText || 'Unable to fetch user heatmap.')
+  }
+
+  return await readResponseBody<BackendHeatmapResponse>(response)
+}
+
+async function runAggregateForUser(userId: string) {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}/aggregate`, {
+    method: 'POST',
+  })
+
+  if (response.ok) {
+    return
+  }
+
+  const errorText = await response.text()
+  throw new Error(errorText || 'Unable to refresh aggregated metrics.')
+}
+
+async function patchUsername(userId: string, username: string) {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}/username`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      username,
+    }),
+  })
+
+  if (response.ok) {
+    return
+  }
+
+  const errorText = await response.text()
+  throw new Error(errorText || 'Unable to update username.')
 }
 
 async function createIntegration(
@@ -83,7 +131,6 @@ async function createIntegration(
 ) {
   const response = await fetch(`${API_BASE_URL}/integrations`, {
     method: 'POST',
-    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },
@@ -110,59 +157,51 @@ export async function syncProfileToBackend({
   const resolvedExistingUserId =
     authSession.backendUserId || profileDraft.backendUserId
 
-  if (!resolvedExistingUserId && !authSession.email) {
+  if (!resolvedExistingUserId) {
     return {
       ok: false,
-      warning:
-        'GitHub OAuth finished without an email in the callback, so the profile stayed local-only.',
+      warning: 'GitHub authentication did not provide a backend user id.',
     }
   }
 
   try {
-    let userId = resolvedExistingUserId
+    const username = profileDraft.username.trim()
+    const leetcodeHandle = profileDraft.leetcodeId.trim()
+    const codeforcesHandle = profileDraft.codeforcesId.trim()
+    const userId = resolvedExistingUserId
 
-    if (!userId && authSession.email) {
-      const createdUser = await createUser(authSession.email)
-      const existingUser =
-        getUserId(createdUser) !== undefined
-          ? createdUser
-          : await fetchUserByEmail(authSession.email)
-
-      userId = getUserId(existingUser)
-    }
-
-    if (!userId) {
-      return {
-        ok: false,
-        warning: 'The backend did not return a user id after authentication.',
-      }
+    if (username) {
+      await patchUsername(userId, username)
     }
 
     const integrationJobs: Promise<void>[] = []
 
-    if (authSession.githubHandle) {
+    if (leetcodeHandle) {
       integrationJobs.push(
-        createIntegration(userId, 'github', authSession.githubHandle),
+        createIntegration(userId, 'leetcode', leetcodeHandle),
       )
     }
 
-    if (profileDraft.leetcodeId) {
+    if (codeforcesHandle) {
       integrationJobs.push(
-        createIntegration(userId, 'leetcode', profileDraft.leetcodeId),
-      )
-    }
-
-    if (profileDraft.codeforcesId) {
-      integrationJobs.push(
-        createIntegration(userId, 'codeforces', profileDraft.codeforcesId),
+        createIntegration(userId, 'codeforces', codeforcesHandle),
       )
     }
 
     await Promise.all(integrationJobs)
 
+    let syncedUser: BackendUser | null = null
+
+    if (authSession.email) {
+      syncedUser = await fetchUserByEmail(authSession.email)
+    } else if (username) {
+      syncedUser = await fetchUserByUsername(username)
+    }
+
     return {
       ok: true,
       userId,
+      routeUsername: getRouteUsername(syncedUser) || username || authSession.githubHandle,
     }
   } catch (error) {
     const message =
@@ -173,4 +212,20 @@ export async function syncProfileToBackend({
       warning: message,
     }
   }
+}
+
+export async function fetchUserProfileByUsername(username: string) {
+  return await fetchUserByUsername(username)
+}
+
+export async function fetchYearHeatmapForUser(
+  userId: string,
+  start: string,
+  end: string,
+) {
+  return await fetchUserHeatmap(userId, start, end)
+}
+
+export async function refreshAggregateForUser(userId: string) {
+  await runAggregateForUser(userId)
 }

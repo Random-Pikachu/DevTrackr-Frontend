@@ -1,4 +1,6 @@
 import type {
+  BackendActivity,
+  BackendActivitiesResponse,
   AuthSession,
   BackendHeatmapResponse,
   BackendNullableString,
@@ -90,6 +92,35 @@ async function fetchUserHeatmap(userId: string, start: string, end: string) {
   }
 
   return await readResponseBody<BackendHeatmapResponse>(response)
+}
+
+async function fetchUserActivities(userId: string, date: string) {
+  const response = await fetch(
+    `${API_BASE_URL}/users/${userId}/activities?date=${encodeURIComponent(date)}`,
+  )
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(errorText || 'Unable to fetch user activities.')
+  }
+
+  const body = await readResponseBody<
+    BackendActivitiesResponse | BackendActivity[] | BackendActivity
+  >(response)
+
+  if (body && typeof body === 'object' && 'activities' in body) {
+    return Array.isArray(body.activities) ? body.activities : []
+  }
+
+  if (Array.isArray(body)) {
+    return body
+  }
+
+  if (body && typeof body === 'object') {
+    return [body]
+  }
+
+  return []
 }
 
 async function runAggregateForUser(userId: string) {
@@ -228,4 +259,8 @@ export async function fetchYearHeatmapForUser(
 
 export async function refreshAggregateForUser(userId: string) {
   await runAggregateForUser(userId)
+}
+
+export async function fetchUserActivitiesForDate(userId: string, date: string) {
+  return await fetchUserActivities(userId, date)
 }

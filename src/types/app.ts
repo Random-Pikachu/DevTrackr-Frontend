@@ -90,3 +90,34 @@ export type BackendHeatmapResponse = {
   end: string
   days: BackendHeatmapDay[]
 }
+
+export type BackendActivityMetadata = {
+  repo?: string
+  messages?: string[]
+  commit_count?: number
+  tags?: string[]
+  rating?: number
+  verdict?: string
+  problem_name?: string
+  difficulty?: string
+  title?: string
+  title_slug?: string
+  status?: string
+}
+
+export type BackendActivity = {
+  id: string
+  user_id: string
+  integration_id: string
+  platform: string
+  activity_date: string
+  activity_type: string
+  metadata?: BackendActivityMetadata
+  fetched_at: string
+}
+
+export type BackendActivitiesResponse = {
+  activities: BackendActivity[]
+  date: string
+  user_id: string
+}

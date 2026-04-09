@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import CalendarHeatmap from 'react-calendar-heatmap'
+import { ActivityDetailsSection } from '../components/profile/ActivityDetailsSection'
 import {
+  fetchUserActivitiesForDate,
   fetchUserProfileByUsername,
   fetchYearHeatmapForUser,
   refreshAggregateForUser,
 } from '../lib/backend'
 import type {
   AuthSession,
+  BackendActivity,
   BackendHeatmapDay,
   BackendUser,
   ProfileDraft,
@@ -37,6 +40,10 @@ export function ProfilePage({
     x: number
     y: number
   } | null>(null)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [selectedActivities, setSelectedActivities] = useState<BackendActivity[]>([])
+  const [isActivitiesLoading, setIsActivitiesLoading] = useState(false)
+  const [activitiesError, setActivitiesError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -108,6 +115,15 @@ export function ProfilePage({
     }
   }, [requestedUsername, yearRange.end, yearRange.start])
 
+  useEffect(() => {
+    if (isLoading || !profileUser?.id || selectedDate) {
+      return
+    }
+
+    const today = new Date().toISOString().slice(0, 10)
+    void loadActivitiesForDate(profileUser.id, today)
+  }, [isLoading, profileUser?.id, selectedDate])
+
   const heatmapValues = useMemo(
     () =>
       heatmapDays.map((day) => ({
@@ -124,32 +140,46 @@ export function ProfilePage({
     username ||
     requestedUsername
 
+  const loadActivitiesForDate = async (userId: string, date: string) => {
+    setSelectedDate(date)
+    setIsActivitiesLoading(true)
+    setActivitiesError(null)
+
+    try {
+      const activities = await fetchUserActivitiesForDate(userId, date)
+      setSelectedActivities(activities)
+    } catch (caughtError) {
+      const message =
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unable to load activities for this day.'
+      setActivitiesError(message)
+      setSelectedActivities([])
+    } finally {
+      setIsActivitiesLoading(false)
+    }
+  }
 
   return (
     <main className="page-shell min-h-screen bg-black px-6 py-10 text-white">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
-        <section className="rounded-[40px] border border-white/10 bg-white px-6 py-8 text-black shadow-[0_24px_70px_rgba(0,0,0,0.35)] md:px-10 md:py-10">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-black/45">
-                /@{headingUsername}
-              </p>
-              <h1 className="mt-4 text-4xl font-bold tracking-[-0.06em] text-black md:text-6xl">
-                One annual contribution map for GitHub, LeetCode, and Codeforces in {yearRange.label}.
-              </h1>
-              <p className="mt-5 max-w-xl text-base leading-8 text-black/60">
-                Refreshed from your latest aggregated backend metrics so each square reflects the full DevTrackr activity mix.
-              </p>
-            </div>
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 border-t border-white/10 pt-12">
+        <section className="stage-card">
+          <div className="max-w-3xl">
+            <h1 className="mt-4 text-4xl font-bold tracking-[-0.06em] text-white md:text-6xl">
+              One annual contribution map for GitHub, LeetCode, and Codeforces in {yearRange.label}.
+            </h1>
+            <p className="mt-5 max-w-2xl text-base leading-8 text-white/60">
+              Refreshed from your latest aggregated backend metrics so each square reflects the full DevTrackr activity mix.
+            </p>
           </div>
 
-          <div className="heatmap-shell relative mt-10 overflow-x-auto rounded-[32px] bg-[#fff8f2] px-4 py-6 md:px-6">
+          <div className="heatmap-shell relative mt-12 overflow-x-auto rounded-[18px] border border-white/10 bg-[#050505] px-6 py-8 md:px-8">
             {isLoading ? (
-              <div className="flex h-[220px] min-w-[760px] items-center justify-center rounded-[24px] border border-[#f0dcc9] bg-white text-sm text-black/55">
+              <div className="flex h-[220px] min-w-[760px] items-center justify-center rounded-[14px] border border-white/10 bg-white/[0.01] text-sm text-white/55">
                 Loading yearly activity...
               </div>
             ) : error ? (
-              <div className="flex h-[220px] min-w-[760px] items-center justify-center rounded-[24px] border border-[#f0dcc9] bg-white px-6 text-center text-sm leading-6 text-black/55">
+              <div className="flex h-[220px] min-w-[760px] items-center justify-center rounded-[14px] border border-white/10 bg-white/[0.01] px-6 text-center text-sm leading-6 text-white/55">
                 {error}
               </div>
             ) : (
@@ -210,15 +240,26 @@ export function ProfilePage({
                       y: rect.top,
                     })
                   }}
+                  onClick={(value) => {
+                    if (!value?.date || !profileUser?.id) {
+                      return
+                    }
+
+                    void loadActivitiesForDate(profileUser.id, String(value.date))
+                  }}
                   values={heatmapValues}
                   weekdayLabels={['Sun', '', 'Tue', '', 'Thu', '', 'Sat']}
                 />
               </div>
             )}
 
+            <div className="mt-8 text-center text-xs text-white/35">
+              Less • GitHub • LeetCode • Codeforces • More
+            </div>
+
             {hoveredDay ? (
               <div
-                className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-[calc(100%+14px)] rounded-[20px] border border-[#f0dcc9] bg-white px-4 py-3 text-sm font-semibold text-black shadow-[0_18px_40px_rgba(0,0,0,0.14)]"
+                className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-[calc(100%+14px)] rounded-xl border border-white/10 bg-[#111111] px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
                 style={{
                   left: hoveredDay.x,
                   top: hoveredDay.y,
@@ -231,6 +272,24 @@ export function ProfilePage({
           </div>
         </section>
 
+        <ActivityDetailsSection
+          activities={selectedActivities}
+          error={activitiesError}
+          isLoading={isActivitiesLoading}
+          selectedDate={selectedDate}
+          onSelectedDateChange={(date) => {
+            if (!profileUser?.id) {
+              setSelectedDate(date)
+              return
+            }
+
+            void loadActivitiesForDate(profileUser.id, date)
+          }}
+        />
+
+        <div className="border-t border-white/10 pt-8 text-center text-sm text-white/35">
+          Last refreshed: {new Date().toLocaleString()}
+        </div>
       </div>
     </main>
   )

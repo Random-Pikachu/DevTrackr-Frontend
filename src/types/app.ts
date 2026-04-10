@@ -59,6 +59,9 @@ export type BackendUserRecord = {
   leetcode_handle?: BackendNullableString
   codeforces_handle?: BackendNullableString
   email: string
+  timezone?: string
+  digest_time?: string
+  email_opt_in?: boolean
   public_slug?: BackendNullableString
   profile_public?: boolean
 }
@@ -72,6 +75,9 @@ export type BackendUser = {
   codeforcesHandle?: string
   publicSlug?: string
   profilePublic?: boolean
+  timezone?: string
+  digestTime?: string
+  emailOptIn?: boolean
 }
 
 export type BackendHeatmapDay = {
@@ -120,4 +126,25 @@ export type BackendActivitiesResponse = {
   activities: BackendActivity[]
   date: string
   user_id: string
+}
+
+export type BackendIntegrationRecord = {
+  id: string
+  user_id: string
+  platform: 'github' | 'leetcode' | 'codeforces'
+  handle: string
+  access_token?: BackendNullableString
+  is_active: boolean
+  last_synced_at?: BackendNullableString
+  created_at: string
+}
+
+export type BackendIntegration = {
+  id: string
+  userId: string
+  platform: 'github' | 'leetcode' | 'codeforces'
+  handle: string
+  isActive: boolean
+  lastSyncedAt?: string
+  createdAt: string
 }

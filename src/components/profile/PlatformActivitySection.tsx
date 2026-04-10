@@ -1,3 +1,4 @@
+import { ChevronDown, Code2, GitBranch, Zap } from 'lucide-react'
 import { useState } from 'react'
 import type { BackendActivity } from '../../types/app'
 
@@ -8,92 +9,10 @@ type PlatformActivitySectionProps = {
   title: string
 }
 
-function PlatformIcon({
-  platform,
-  className,
-}: {
-  className?: string
-  platform: 'github' | 'codeforces' | 'leetcode'
-}) {
-  if (platform === 'github') {
-    return (
-      <svg
-        aria-hidden="true"
-        className={className}
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <path
-          d="M6 6V18M18 8V13M6 6C6 4.89543 6.89543 4 8 4C9.10457 4 10 4.89543 10 6C10 7.10457 9.10457 8 8 8C6.89543 8 6 7.10457 6 6ZM18 8C18 6.89543 18.8954 6 20 6C21.1046 6 22 6.89543 22 8C22 9.10457 21.1046 10 20 10C18.8954 10 18 9.10457 18 8ZM6 18C6 16.8954 6.89543 16 8 16C9.10457 16 10 16.8954 10 18C10 19.1046 9.10457 20 8 20C6.89543 20 6 19.1046 6 18ZM8 8L18.2 8M8 16.5L18.2 9.5"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="1.8"
-        />
-      </svg>
-    )
-  }
-
-  if (platform === 'codeforces') {
-    return (
-      <svg
-        aria-hidden="true"
-        className={className}
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <path
-          d="M8 8L4 16M8 8L12 10M8 8L12 4M12 10L8 16M12 10L16 12M8 16L12 20M16 12L12 20M16 12L20 8"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="1.8"
-        />
-      </svg>
-    )
-  }
-
-  return (
-    <svg
-      aria-hidden="true"
-      className={className}
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <path
-        d="M13 2L4 14H11L10 22L20 9H13L13 2Z"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.8"
-      />
-    </svg>
-  )
-}
-
-function ChevronIcon({
-  className,
-  isExpanded,
-}: {
-  className?: string
-  isExpanded: boolean
-}) {
-  return (
-    <svg
-      aria-hidden="true"
-      className={`${className || ''} transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <path
-        d="M6 9L12 15L18 9"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.8"
-      />
-    </svg>
-  )
+const platformIcons = {
+  github: GitBranch,
+  codeforces: Code2,
+  leetcode: Zap,
 }
 
 function ActivityEntry({ activity }: { activity: BackendActivity }) {
@@ -178,6 +97,7 @@ export function PlatformActivitySection({
   title,
 }: PlatformActivitySectionProps) {
   const [isExpanded, setIsExpanded] = useState(platform === 'github')
+  const Icon = platformIcons[platform]
 
   return (
     <section className="overflow-hidden rounded-[14px] border border-white/10 bg-white/[0.01]">
@@ -192,7 +112,7 @@ export function PlatformActivitySection({
         }}
         type="button"
       >
-        <PlatformIcon className="h-4 w-4 text-white/55" platform={platform} />
+        <Icon className="h-4 w-4 text-white/55" />
         <span className="flex-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/50">
           {title}
         </span>
@@ -204,7 +124,9 @@ export function PlatformActivitySection({
           {activities.length} entr{activities.length === 1 ? 'y' : 'ies'}
         </span>
         {activities.length > 0 ? (
-          <ChevronIcon className="h-4 w-4 text-white/35" isExpanded={isExpanded} />
+          <ChevronDown
+            className={`h-4 w-4 text-white/35 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+          />
         ) : null}
       </button>
 

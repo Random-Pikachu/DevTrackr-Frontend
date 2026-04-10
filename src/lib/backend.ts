@@ -2,6 +2,8 @@ import type {
   BackendActivity,
   BackendActivitiesResponse,
   AuthSession,
+  BackendIntegration,
+  BackendIntegrationRecord,
   BackendHeatmapResponse,
   BackendNullableString,
   BackendSyncResult,
@@ -46,6 +48,32 @@ function normalizeUser(user: BackendUserRecord): BackendUser {
     codeforcesHandle: getNullableStringValue(user.codeforces_handle),
     publicSlug: getNullableStringValue(user.public_slug),
     profilePublic: user.profile_public,
+    timezone:
+      'timezone' in user && typeof user.timezone === 'string'
+        ? user.timezone
+        : undefined,
+    digestTime:
+      'digest_time' in user && typeof user.digest_time === 'string'
+        ? user.digest_time
+        : undefined,
+    emailOptIn:
+      'email_opt_in' in user && typeof user.email_opt_in === 'boolean'
+        ? user.email_opt_in
+        : undefined,
+  }
+}
+
+function normalizeIntegration(
+  integration: BackendIntegrationRecord,
+): BackendIntegration {
+  return {
+    id: integration.id,
+    userId: integration.user_id,
+    platform: integration.platform,
+    handle: integration.handle,
+    isActive: integration.is_active,
+    lastSyncedAt: getNullableStringValue(integration.last_synced_at),
+    createdAt: integration.created_at,
   }
 }
 
@@ -136,6 +164,19 @@ async function runAggregateForUser(userId: string) {
   throw new Error(errorText || 'Unable to refresh aggregated metrics.')
 }
 
+async function sendDigestForUser(userId: string) {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}/send-digest`, {
+    method: 'POST',
+  })
+
+  if (response.ok) {
+    return
+  }
+
+  const errorText = await response.text()
+  throw new Error(errorText || 'Unable to send digest right now.')
+}
+
 async function patchUsername(userId: string, username: string) {
   const response = await fetch(`${API_BASE_URL}/users/${userId}/username`, {
     method: 'PATCH',
@@ -179,6 +220,88 @@ async function createIntegration(
 
   const errorText = await response.text()
   throw new Error(errorText || `Unable to save ${platform} integration.`)
+}
+
+async function patchProfilePublic(userId: string, profilePublic: boolean) {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}/profile-public`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      profile_public: profilePublic,
+    }),
+  })
+
+  if (response.ok) {
+    return
+  }
+
+  const errorText = await response.text()
+  throw new Error(errorText || 'Unable to update profile visibility.')
+}
+
+async function patchEmailOptIn(userId: string, emailOptIn: boolean) {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}/email-opt-in`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email_opt_in: emailOptIn,
+    }),
+  })
+
+  if (response.ok) {
+    return
+  }
+
+  const errorText = await response.text()
+  throw new Error(errorText || 'Unable to update email digest setting.')
+}
+
+async function patchDigestTime(userId: string, digestTime: string) {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}/digest-time`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      digest_time: digestTime,
+    }),
+  })
+
+  if (response.ok) {
+    return
+  }
+
+  const errorText = await response.text()
+  throw new Error(errorText || 'Unable to update digest time.')
+}
+
+async function fetchActiveUserIntegrations(userId: string) {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}/integrations/active`)
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(errorText || 'Unable to load integrations.')
+  }
+
+  const body = await readResponseBody<BackendIntegrationRecord[]>(response)
+  return Array.isArray(body) ? body.map(normalizeIntegration) : []
+}
+
+async function deactivateIntegration(integrationId: string) {
+  const response = await fetch(`${API_BASE_URL}/integrations/${integrationId}`, {
+    method: 'DELETE',
+  })
+
+  if (response.ok) {
+    return
+  }
+
+  const errorText = await response.text()
+  throw new Error(errorText || 'Unable to disconnect integration.')
 }
 
 export async function syncProfileToBackend({
@@ -263,4 +386,46 @@ export async function refreshAggregateForUser(userId: string) {
 
 export async function fetchUserActivitiesForDate(userId: string, date: string) {
   return await fetchUserActivities(userId, date)
+}
+
+export async function sendDigestNowForUser(userId: string) {
+  await sendDigestForUser(userId)
+}
+
+export async function updateUsernameForUser(userId: string, username: string) {
+  await patchUsername(userId, username)
+}
+
+export async function updateProfilePublicForUser(
+  userId: string,
+  profilePublic: boolean,
+) {
+  await patchProfilePublic(userId, profilePublic)
+}
+
+export async function updateEmailOptInForUser(
+  userId: string,
+  emailOptIn: boolean,
+) {
+  await patchEmailOptIn(userId, emailOptIn)
+}
+
+export async function updateDigestTimeForUser(userId: string, digestTime: string) {
+  await patchDigestTime(userId, digestTime)
+}
+
+export async function fetchActiveIntegrationsForUser(userId: string) {
+  return await fetchActiveUserIntegrations(userId)
+}
+
+export async function createIntegrationForUser(
+  userId: string,
+  platform: 'github' | 'leetcode' | 'codeforces',
+  handle: string,
+) {
+  await createIntegration(userId, platform, handle)
+}
+
+export async function disconnectIntegrationForUser(integrationId: string) {
+  await deactivateIntegration(integrationId)
 }

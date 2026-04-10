@@ -46,3 +46,11 @@ export function persistAuthSession(session: AuthSession) {
 export function persistProfile(profile: ProfileDraft) {
   window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile))
 }
+
+export function clearStoredAuthSession() {
+  window.localStorage.removeItem(AUTH_STORAGE_KEY)
+}
+
+export function clearStoredProfile() {
+  window.localStorage.removeItem(PROFILE_STORAGE_KEY)
+}

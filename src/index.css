@@ -116,3 +116,38 @@ input[type='date']::-webkit-calendar-picker-indicator {
   cursor: pointer;
   filter: invert(1) opacity(0.6);
 }
+
+.settings-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(170, 170, 170, 0.9) rgba(255, 255, 255, 0.06);
+}
+
+.settings-scrollbar::-webkit-scrollbar {
+  width: 12px;
+}
+
+.settings-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+}
+
+.settings-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #a8a8a8 0%, #8c8c8c 55%, #6f6f6f 100%);
+  border: 2px solid rgba(8, 8, 8, 0.95);
+  border-radius: 999px;
+}
+
+.settings-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #b9b9b9 0%, #989898 55%, #7c7c7c 100%);
+}
+
+.settings-scrollbar::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.settings-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}

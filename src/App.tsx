@@ -1,6 +1,8 @@
 import { startTransition, useEffect, useState } from 'react'
 import { syncProfileToBackend } from './lib/backend'
 import {
+  clearStoredAuthSession,
+  clearStoredProfile,
   loadStoredAuthSession,
   loadStoredProfile,
   persistAuthSession,
@@ -115,6 +117,14 @@ export default function App() {
     persistProfile(nextDraft)
   }
 
+  const handleLogout = () => {
+    clearStoredAuthSession()
+    clearStoredProfile()
+    setAuthSession(loadStoredAuthSession())
+    setProfileDraft(loadStoredProfile())
+    navigate('/')
+  }
+
   const handleProfileCreate = async (
     nextDraft: ProfileDraft,
   ): Promise<BackendSyncResult> => {
@@ -178,6 +188,9 @@ export default function App() {
     case 'profile':
       return (
         <ProfilePage
+          onDraftChange={handleProfileDraftChange}
+          onLogout={handleLogout}
+          onNavigate={navigate}
           requestedUsername={route.username}
           profileDraft={profileDraft}
           authSession={authSession}

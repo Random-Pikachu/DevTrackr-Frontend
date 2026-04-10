@@ -34,12 +34,6 @@ export function ProfilePage({
   profileDraft,
   authSession,
 }: ProfilePageProps) {
-  const username =
-    authSession.publicSlug ||
-    authSession.backendUsername ||
-    requestedUsername ||
-    profileDraft.username
-
   const normalizedRequestedUsername = requestedUsername.trim().toLowerCase()
   const normalizedSessionRouteUsername = (
     authSession.publicSlug ||
@@ -69,6 +63,12 @@ export function ProfilePage({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const normalizedError = error?.toLowerCase() || ''
+  const isUserNotFound =
+    !isLoading &&
+    !profileUser &&
+    (normalizedError.includes('not found') ||
+      normalizedError.includes('unable to fetch user by username'))
   const isPrivateForViewer =
     Boolean(profileUser) &&
     profileUser?.profilePublic !== true &&
@@ -93,6 +93,10 @@ export function ProfilePage({
 
     setIsLoading(true)
     setError(null)
+    setProfileUser(null)
+    setHeatmapDays([])
+    setSelectedActivities([])
+    setSelectedDate(null)
 
     void fetchUserProfileByUsername(requestedUsername)
       .then(async (user) => {
@@ -169,12 +173,6 @@ export function ProfilePage({
       })),
     [heatmapDays],
   )
-
-  const headingUsername =
-    profileUser?.publicSlug ||
-    profileUser?.username ||
-    username ||
-    requestedUsername
 
   const loadActivitiesForDate = async (userId: string, date: string) => {
     setSelectedDate(date)
@@ -257,7 +255,7 @@ export function ProfilePage({
         ) : null}
 
         <section className="stage-card">
-          {!isPrivateForViewer ? (
+          {!isPrivateForViewer && !isUserNotFound ? (
             <div className="max-w-3xl">
               <h1 className="mt-4 text-4xl font-bold tracking-[-0.06em] text-white md:text-6xl">
                 One annual contribution map for GitHub, LeetCode, and Codeforces.
@@ -279,6 +277,18 @@ export function ProfilePage({
               <p className="mt-4 max-w-2xl text-sm leading-7 text-white/50">
                 The profile exists, but its activity details and contribution map
                 are only visible to the owner while public sharing is turned off.
+              </p>
+            </div>
+          ) : isUserNotFound ? (
+            <div className="mt-12 rounded-[18px] border border-white/10 bg-[#050505] px-6 py-10 md:px-8">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/40">
+                User not found
+              </p>
+              <h2 className="mt-4 text-2xl font-bold tracking-[-0.04em] text-white md:text-3xl">
+                This user profile does not exist.
+              </h2>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-white/50">
+                The requested profile could not be found. Please check the username and try again.
               </p>
             </div>
           ) : (
@@ -378,7 +388,7 @@ export function ProfilePage({
           )}
         </section>
 
-        {!isPrivateForViewer ? (
+        {!isPrivateForViewer && !isUserNotFound ? (
           <ActivityDetailsSection
             activities={selectedActivities}
             error={activitiesError}
@@ -395,7 +405,7 @@ export function ProfilePage({
           />
         ) : null}
 
-        {!isPrivateForViewer ? (
+        {!isPrivateForViewer && !isUserNotFound ? (
           <div className="border-t border-white/10 pt-8 text-center text-sm text-white/35">
             Last refreshed: {new Date().toLocaleString()}
           </div>

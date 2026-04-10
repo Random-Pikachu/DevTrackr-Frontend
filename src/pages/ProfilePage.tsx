@@ -203,7 +203,6 @@ export function ProfilePage({
     }
 
     setProfileUser(user)
-    await refreshAggregateForUser(user.id)
 
     const heatmap = await fetchYearHeatmapForUser(
       user.id,
@@ -212,10 +211,6 @@ export function ProfilePage({
     )
 
     setHeatmapDays(heatmap?.days || [])
-
-    if (selectedDate) {
-      await loadActivitiesForDate(user.id, selectedDate)
-    }
 
     if (nextUsername && nextUsername !== requestedUsername) {
       onNavigate(`/@${encodeURIComponent(nextUsername)}`, { replace: true })

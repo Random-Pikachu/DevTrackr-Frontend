@@ -38,6 +38,21 @@ async function readResponseBody<T>(response: Response): Promise<T | null> {
   return (await response.json()) as T
 }
 
+async function readBackendErrorMessage(response: Response, fallback: string) {
+  const body = await readResponseBody<{ error?: string; message?: string }>(response)
+
+  if (body?.error) {
+    return body.error
+  }
+
+  if (body?.message) {
+    return body.message
+  }
+
+  const errorText = await response.text()
+  return errorText || fallback
+}
+
 function normalizeUser(user: BackendUserRecord): BackendUser {
   return {
     id: user.id,
@@ -192,8 +207,11 @@ async function patchUsername(userId: string, username: string) {
     return
   }
 
-  const errorText = await response.text()
-  throw new Error(errorText || 'Unable to update username.')
+  const errorMessage = await readBackendErrorMessage(
+    response,
+    'Unable to update username.',
+  )
+  throw new Error(errorMessage)
 }
 
 async function createIntegration(

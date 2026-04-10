@@ -263,8 +263,8 @@ export function OnboardingPage({
 
   return (
     <main className="page-shell min-h-screen bg-black px-6 py-10 text-white">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 border-t border-white/10 pt-12">
-        <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 pt-12">
+        <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/45">
               Onboarding

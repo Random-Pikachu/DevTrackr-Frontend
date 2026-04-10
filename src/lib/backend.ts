@@ -47,7 +47,7 @@ function normalizeUser(user: BackendUserRecord): BackendUser {
     leetcodeHandle: getNullableStringValue(user.leetcode_handle),
     codeforcesHandle: getNullableStringValue(user.codeforces_handle),
     publicSlug: getNullableStringValue(user.public_slug),
-    profilePublic: user.profile_public,
+    profilePublic: user.profile_public ?? false,
     timezone:
       'timezone' in user && typeof user.timezone === 'string'
         ? user.timezone

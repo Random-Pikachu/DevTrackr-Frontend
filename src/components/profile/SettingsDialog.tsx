@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Check,
-  ExternalLink,
-  LoaderCircle,
   Shield,
   X,
 } from 'lucide-react'
@@ -12,6 +10,7 @@ import {
   fetchActiveIntegrationsForUser,
   updateDigestTimeForUser,
   updateEmailOptInForUser,
+  updateProfilePublicForUser,
   updateUsernameForUser,
 } from '../../lib/backend'
 import type {
@@ -168,6 +167,9 @@ export function SettingsDialog({
   profileUser,
 }: SettingsDialogProps) {
   const [username, setUsername] = useState(profileUser.publicSlug || profileUser.username || '')
+  const [isPublicProfile, setIsPublicProfile] = useState(
+    profileUser.profilePublic ?? false,
+  )
   const [emailOptIn, setEmailOptIn] = useState(profileUser.emailOptIn ?? true)
   const [digestTime, setDigestTime] = useState(profileUser.digestTime || '20:00')
   const [integrations, setIntegrations] = useState<BackendIntegration[]>([])
@@ -178,6 +180,7 @@ export function SettingsDialog({
     initialProfileDraft.codeforcesId || profileUser.codeforcesHandle || '',
   )
   const [isSavingUsername, setIsSavingUsername] = useState(false)
+  const [isSavingPrivacy, setIsSavingPrivacy] = useState(false)
   const [isSavingNotifications, setIsSavingNotifications] = useState(false)
   const [busyIntegration, setBusyIntegration] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<string | null>(null)
@@ -206,6 +209,7 @@ export function SettingsDialog({
     }
 
     setUsername(profileUser.publicSlug || profileUser.username || '')
+    setIsPublicProfile(profileUser.profilePublic ?? false)
     setEmailOptIn(profileUser.emailOptIn ?? true)
     setDigestTime(profileUser.digestTime || '20:00')
     setLeetcodeHandle(initialProfileDraft.leetcodeId || profileUser.leetcodeHandle || '')
@@ -306,6 +310,29 @@ export function SettingsDialog({
       setError(message)
     } finally {
       setIsSavingNotifications(false)
+    }
+  }
+
+  const handleTogglePublicProfile = async (nextValue: boolean) => {
+    setIsSavingPrivacy(true)
+    setError(null)
+    setFeedback(null)
+
+    try {
+      await updateProfilePublicForUser(profileUser.id, nextValue)
+      setIsPublicProfile(nextValue)
+      await onProfileUpdated()
+      setFeedback(
+        nextValue ? 'Public profile enabled.' : 'Public profile disabled.',
+      )
+    } catch (caughtError) {
+      const message =
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unable to update profile privacy.'
+      setError(message)
+    } finally {
+      setIsSavingPrivacy(false)
     }
   }
 
@@ -499,6 +526,29 @@ export function SettingsDialog({
             <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 px-4 py-4">
               <p className="text-xs uppercase tracking-[0.18em] text-white/35">Email</p>
               <p className="mt-2 text-sm text-white/75">{profileUser.email}</p>
+            </div>
+          </section>
+
+          <section className="rounded-[24px] border border-white/10 bg-white/[0.015] p-5">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">
+              Privacy
+            </h3>
+            <div className="mt-4 grid gap-4">
+              <ToggleRow
+                checked={isPublicProfile}
+                description="Control whether other people can open your public /@username profile page."
+                disabled={isSavingPrivacy}
+                label="Public profile"
+                onChange={handleTogglePublicProfile}
+              />
+              <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-white/35">
+                  Public URL preview
+                </p>
+                <p className="mt-2 text-sm text-white/75">
+                  /@{profileUser.publicSlug || profileUser.username || username.trim()}
+                </p>
+              </div>
             </div>
           </section>
 

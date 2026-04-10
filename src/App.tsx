@@ -175,6 +175,20 @@ export default function App() {
       return <GitHubAuthCallbackPage />
 
     case 'onboarding':
+      {
+        const profileRouteUsername =
+          authSession.publicSlug || authSession.backendUsername
+
+        if (profileRouteUsername) {
+        navigate(
+          `/@${encodeURIComponent(profileRouteUsername)}`,
+          { replace: true },
+        )
+
+        return null
+      }
+      }
+
       return (
         <OnboardingPage
           authSession={authSession}

@@ -167,7 +167,7 @@ export default function App() {
         <AuthenticatePage
           authSession={authSession}
           onAuthSessionUpdate={handleAuthSessionUpdate}
-          onContinue={() => navigate('/onboarding')}
+          onContinue={(nextPath) => navigate(nextPath)}
         />
       )
 

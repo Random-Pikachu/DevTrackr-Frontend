@@ -12,6 +12,7 @@ export type AuthSession = {
   oauthCode?: string
   githubHandle?: string
   email?: string
+  isNewUser?: boolean
   backendUserId?: string
   backendUsername?: string
   publicSlug?: string
@@ -44,6 +45,8 @@ export type AuthPopupPayload = {
   email?: string
   token?: string
   userId?: string
+  isNewUser?: boolean
+  is_new_user?: string
   error?: string
 }
 

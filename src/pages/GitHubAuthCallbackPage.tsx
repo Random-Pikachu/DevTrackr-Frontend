@@ -22,6 +22,7 @@ export function GitHubAuthCallbackPage() {
         params.get('userId') ||
         params.get('id') ||
         undefined,
+      is_new_user: params.get('is_new_user') || undefined,
       error:
         params.get('error_description') ||
         params.get('error') ||

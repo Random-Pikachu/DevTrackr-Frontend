@@ -372,6 +372,10 @@ export async function fetchUserProfileByUsername(username: string) {
   return await fetchUserByUsername(username)
 }
 
+export async function fetchUserProfileByEmail(email: string) {
+  return await fetchUserByEmail(email)
+}
+
 export async function fetchYearHeatmapForUser(
   userId: string,
   start: string,

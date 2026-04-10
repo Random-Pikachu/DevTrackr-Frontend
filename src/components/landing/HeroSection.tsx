@@ -64,10 +64,6 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
               ))}
             </div>
 
-            <div className="border-t border-white/10 pt-4 text-xs leading-6 text-white/40">
-              Collected, normalized, and dispatched • GitHub • LeetCode •
-              Codeforces
-            </div>
           </div>
         </div>
       </div>

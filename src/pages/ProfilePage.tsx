@@ -35,18 +35,6 @@ export function ProfilePage({
   authSession,
 }: ProfilePageProps) {
   const normalizedRequestedUsername = requestedUsername.trim().toLowerCase()
-  const normalizedSessionRouteUsername = (
-    authSession.publicSlug ||
-    authSession.backendUsername ||
-    profileDraft.username ||
-    ''
-  )
-    .trim()
-    .toLowerCase()
-  const canManageProfile =
-    authSession.status === 'connected' &&
-    Boolean(normalizedRequestedUsername) &&
-    normalizedRequestedUsername === normalizedSessionRouteUsername
 
   const [profileUser, setProfileUser] = useState<BackendUser | null>(null)
   const [heatmapDays, setHeatmapDays] = useState<BackendHeatmapDay[]>([])
@@ -63,6 +51,22 @@ export function ProfilePage({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const sessionRouteUsernames = [
+    authSession.publicSlug,
+    authSession.backendUsername,
+    profileDraft.username,
+  ]
+    .map((value) => value?.trim().toLowerCase())
+    .filter((value): value is string => Boolean(value))
+  const canManageByRoute =
+    authSession.status === 'connected' &&
+    Boolean(normalizedRequestedUsername) &&
+    sessionRouteUsernames.includes(normalizedRequestedUsername)
+  const canManageByUserId =
+    authSession.status === 'connected' &&
+    Boolean(authSession.backendUserId) &&
+    authSession.backendUserId === profileUser?.id
+  const canManageProfile = canManageByRoute || canManageByUserId
   const normalizedError = error?.toLowerCase() || ''
   const isUserNotFound =
     !isLoading &&

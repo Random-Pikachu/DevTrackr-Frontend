@@ -34,6 +34,25 @@ export function ProfilePage({
   profileDraft,
   authSession,
 }: ProfilePageProps) {
+  const pad2 = (value: number) => String(value).padStart(2, '0')
+
+  const toLocalDateFromKey = (dateKey: string) => {
+    const [year, month, day] = dateKey.split('-').map(Number)
+    if (!year || !month || !day) {
+      return new Date(dateKey)
+    }
+
+    return new Date(year, month - 1, day)
+  }
+
+  const toDateKey = (value: string | Date) => {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`
+    }
+
+    return String(value).slice(0, 10)
+  }
+
   const normalizedRequestedUsername = requestedUsername.trim().toLowerCase()
 
   const [profileUser, setProfileUser] = useState<BackendUser | null>(null)
@@ -81,8 +100,10 @@ export function ProfilePage({
   const yearRange = useMemo(() => {
     const currentYear = new Date().getFullYear()
     return {
-      start: `${currentYear}-01-01`,
-      end: `${currentYear}-12-31`,
+      startKey: `${currentYear}-01-01`,
+      endKey: `${currentYear}-12-31`,
+      startDate: new Date(currentYear, 0, 1),
+      endDate: new Date(currentYear, 11, 31),
       label: currentYear,
     }
   }, [])
@@ -127,8 +148,8 @@ export function ProfilePage({
 
         const heatmap = await fetchYearHeatmapForUser(
           user.id,
-          yearRange.start,
-          yearRange.end,
+          yearRange.startKey,
+          yearRange.endKey,
         )
 
         if (!isActive) {
@@ -157,7 +178,7 @@ export function ProfilePage({
     return () => {
       isActive = false
     }
-  }, [canManageProfile, requestedUsername, yearRange.end, yearRange.start])
+  }, [canManageProfile, requestedUsername, yearRange.endKey, yearRange.startKey])
 
   useEffect(() => {
     if (isLoading || isPrivateForViewer || !profileUser?.id || selectedDate) {
@@ -171,9 +192,10 @@ export function ProfilePage({
   const heatmapValues = useMemo(
     () =>
       heatmapDays.map((day) => ({
-        date: day.date,
-        count: day.github_commits,
-        total: day.total_contributions,
+        date: toLocalDateFromKey(day.date),
+        dateKey: day.date,
+        count: day.total_contributions ?? 0,
+        total: day.total_contributions ?? 0,
       })),
     [heatmapDays],
   )
@@ -210,8 +232,8 @@ export function ProfilePage({
 
     const heatmap = await fetchYearHeatmapForUser(
       user.id,
-      yearRange.start,
-      yearRange.end,
+      yearRange.startKey,
+      yearRange.endKey,
     )
 
     setHeatmapDays(heatmap?.days || [])
@@ -291,7 +313,11 @@ export function ProfilePage({
               </p>
             </div>
           ) : (
-          <div className="heatmap-shell relative mt-12 overflow-x-auto rounded-[18px] border border-white/10 bg-[#050505] px-6 py-8 md:px-8">
+          <>
+          <p className="mt-8 text-xs text-white/45">
+            * In heatmap, color intensity is based on GitHub commits and correct submissions on LeetCode & Codeforces.
+          </p>
+          <div className="heatmap-shell relative mt-3 overflow-x-auto rounded-[18px] border border-white/10 bg-[#050505] px-6 py-8 md:px-8">
             {isLoading ? (
               <div className="flex h-[220px] min-w-[760px] items-center justify-center rounded-[14px] border border-white/10 bg-white/[0.01] text-sm text-white/55">
                 Loading yearly activity...
@@ -322,7 +348,7 @@ export function ProfilePage({
 
                     return 'heat-level-1'
                   }}
-                  endDate={yearRange.end}
+                  endDate={yearRange.endDate}
                   gutterSize={5}
                   monthLabels={[
                     'Jan',
@@ -339,7 +365,7 @@ export function ProfilePage({
                     'Dec',
                   ]}
                   showWeekdayLabels
-                  startDate={yearRange.start}
+                  startDate={yearRange.startDate}
                   onMouseLeave={() => {
                     setHoveredDay(null)
                   }}
@@ -349,10 +375,15 @@ export function ProfilePage({
                       return
                     }
 
+                    const dateKey =
+                      typeof value.dateKey === 'string'
+                        ? value.dateKey
+                        : toDateKey(value.date as string | Date)
+
                     const rect = event.currentTarget.getBoundingClientRect()
 
                     setHoveredDay({
-                      date: String(value.date),
+                      date: dateKey,
                       total: Number(value.total || 0),
                       x: rect.left + rect.width / 2,
                       y: rect.top,
@@ -363,7 +394,12 @@ export function ProfilePage({
                       return
                     }
 
-                    void loadActivitiesForDate(profileUser.id, String(value.date))
+                    const dateKey =
+                      typeof value.dateKey === 'string'
+                        ? value.dateKey
+                        : toDateKey(value.date as string | Date)
+
+                    void loadActivitiesForDate(profileUser.id, dateKey)
                   }}
                   values={heatmapValues}
                   weekdayLabels={['Sun', '', 'Tue', '', 'Thu', '', 'Sat']}
@@ -384,6 +420,7 @@ export function ProfilePage({
               </div>
             ) : null}
           </div>
+          </>
           )}
         </section>
 

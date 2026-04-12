@@ -422,7 +422,12 @@ export function ProfilePage({
                 {hoveredDay.total === 1 ? '' : 's'}
               </div>
             ) : null}
+
           </div>
+          <p className="mt-2 text-right text-[11px] leading-5 text-white/40">
+            (For some historical data, LeetCode&apos;s public API does not expose solved questions,
+            so we use an alternate method to at least estimate submission count.)
+          </p>
           </>
           )}
         </section>

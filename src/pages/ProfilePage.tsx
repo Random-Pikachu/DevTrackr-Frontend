@@ -35,23 +35,8 @@ export function ProfilePage({
   authSession,
 }: ProfilePageProps) {
   const pad2 = (value: number) => String(value).padStart(2, '0')
-
-  const toLocalDateFromKey = (dateKey: string) => {
-    const [year, month, day] = dateKey.split('-').map(Number)
-    if (!year || !month || !day) {
-      return new Date(dateKey)
-    }
-
-    return new Date(year, month - 1, day)
-  }
-
-  const toDateKey = (value: string | Date) => {
-    if (value instanceof Date && !Number.isNaN(value.getTime())) {
-      return `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`
-    }
-
-    return String(value).slice(0, 10)
-  }
+  const toDateKey = (value: Date) =>
+    `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`
 
   const normalizedRequestedUsername = requestedUsername.trim().toLowerCase()
 
@@ -190,14 +175,42 @@ export function ProfilePage({
   }, [isLoading, isPrivateForViewer, profileUser?.id, selectedDate])
 
   const heatmapValues = useMemo(
-    () =>
-      heatmapDays.map((day) => ({
-        date: toLocalDateFromKey(day.date),
-        dateKey: day.date,
-        count: day.total_contributions ?? 0,
-        total: day.total_contributions ?? 0,
-      })),
-    [heatmapDays],
+    () => {
+      const totalsByDate = new Map(
+        heatmapDays.map((day) => [day.date, day.total_contributions ?? 0]),
+      )
+
+      const values: Array<{
+        date: Date
+        dateKey: string
+        count: number
+        total: number
+      }> = []
+
+      for (
+        let cursor = new Date(yearRange.startDate);
+        cursor <= yearRange.endDate;
+        cursor.setDate(cursor.getDate() + 1)
+      ) {
+        const localDate = new Date(
+          cursor.getFullYear(),
+          cursor.getMonth(),
+          cursor.getDate(),
+        )
+        const dateKey = toDateKey(localDate)
+        const total = totalsByDate.get(dateKey) ?? 0
+
+        values.push({
+          date: localDate,
+          dateKey,
+          count: total,
+          total,
+        })
+      }
+
+      return values
+    },
+    [heatmapDays, yearRange.endDate, yearRange.startDate],
   )
 
   const loadActivitiesForDate = async (userId: string, date: string) => {
@@ -370,36 +383,26 @@ export function ProfilePage({
                     setHoveredDay(null)
                   }}
                   onMouseOver={(event, value) => {
-                    if (!value?.date) {
+                    if (!value?.date || typeof value.dateKey !== 'string') {
                       setHoveredDay(null)
                       return
                     }
 
-                    const dateKey =
-                      typeof value.dateKey === 'string'
-                        ? value.dateKey
-                        : toDateKey(value.date as string | Date)
-
                     const rect = event.currentTarget.getBoundingClientRect()
 
                     setHoveredDay({
-                      date: dateKey,
+                      date: value.dateKey,
                       total: Number(value.total || 0),
                       x: rect.left + rect.width / 2,
                       y: rect.top,
                     })
                   }}
                   onClick={(value) => {
-                    if (!value?.date || !profileUser?.id) {
+                    if (!value?.date || typeof value.dateKey !== 'string' || !profileUser?.id) {
                       return
                     }
 
-                    const dateKey =
-                      typeof value.dateKey === 'string'
-                        ? value.dateKey
-                        : toDateKey(value.date as string | Date)
-
-                    void loadActivitiesForDate(profileUser.id, dateKey)
+                    void loadActivitiesForDate(profileUser.id, value.dateKey)
                   }}
                   values={heatmapValues}
                   weekdayLabels={['Sun', '', 'Tue', '', 'Thu', '', 'Sat']}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, Check, Code2, GitBranch, UserRound } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import type { AuthSession, BackendSyncResult, ProfileDraft } from '../types/app'
 
 type OnboardingPageProps = {
@@ -12,70 +12,28 @@ type OnboardingPageProps = {
 
 type StepId = 'username' | 'leetcode' | 'codeforces' | 'review'
 
-function getInitialStep(profileDraft: ProfileDraft): StepId {
-  if (!profileDraft.username) {
-    return 'username'
-  }
+const steps: { id: StepId; label: string; optional?: boolean }[] = [
+  { id: 'username', label: 'Username' },
+  { id: 'leetcode', label: 'LeetCode', optional: true },
+  { id: 'codeforces', label: 'Codeforces', optional: true },
+  { id: 'review', label: 'Review' },
+]
 
-  if (!profileDraft.leetcodeId) {
-    return 'leetcode'
-  }
-
-  if (!profileDraft.codeforcesId) {
-    return 'codeforces'
-  }
-
+function getInitialStep(draft: ProfileDraft): StepId {
+  if (!draft.username) return 'username'
+  if (!draft.leetcodeId) return 'leetcode'
+  if (!draft.codeforcesId) return 'codeforces'
   return 'review'
 }
 
-const stepMeta: Record<
-  StepId,
-  {
-    description: string
-    label: string
-    title: string
-  }
-> = {
-  username: {
-    label: 'Account',
-    title: 'Choose the route name for your DevTrackr page.',
-    description:
-      'This becomes your public profile slug and the main identity for your shared page.',
-  },
-  leetcode: {
-    label: 'LeetCode',
-    title: 'Add your LeetCode handle if you want solves to count too.',
-    description:
-      'You can skip it for now and come back later from settings without losing progress.',
-  },
-  codeforces: {
-    label: 'Codeforces',
-    title: 'Add your Codeforces handle to bring contest solves into the same streak.',
-    description:
-      'This is optional as well, but it helps keep the contribution map complete.',
-  },
-  review: {
-    label: 'Review',
-    title: 'Review the profile details before publishing your route.',
-    description:
-      'Once created, we will send you straight to your public DevTrackr profile.',
-  },
-}
-
 function buildDraft(
-  initialProfileDraft: ProfileDraft,
+  base: ProfileDraft,
   username: string,
   leetcodeId: string,
   codeforcesId: string,
   overrides: Partial<ProfileDraft> = {},
-) {
-  return {
-    ...initialProfileDraft,
-    username,
-    leetcodeId,
-    codeforcesId,
-    ...overrides,
-  }
+): ProfileDraft {
+  return { ...base, username, leetcodeId, codeforcesId, ...overrides }
 }
 
 export function OnboardingPage({
@@ -93,165 +51,75 @@ export function OnboardingPage({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [warning, setWarning] = useState<string | null>(null)
 
-  const githubLabel = authSession.githubHandle || 'GitHub connected'
   const usernameValue = username.trim().replace(/^@+/, '')
   const leetcodeValue = leetcodeId.trim()
   const codeforcesValue = codeforcesId.trim()
-
-  const stepOrder = useMemo<StepId[]>(
-    () => ['username', 'leetcode', 'codeforces', 'review'],
-    [],
-  )
-
-  const activeStepNumber = stepOrder.indexOf(step) + 1
+  const stepOrder = useMemo<StepId[]>(() => ['username', 'leetcode', 'codeforces', 'review'], [])
+  const activeIndex = stepOrder.indexOf(step)
 
   const advance = (nextStep: StepId) => {
-    setStepKey((current) => current + 1)
+    setStepKey((c) => c + 1)
     setStep(nextStep)
+    setWarning(null)
   }
 
   const commitDraft = (overrides: Partial<ProfileDraft>) => {
-    onDraftChange(
-      buildDraft(
-        initialProfileDraft,
-        usernameValue,
-        leetcodeValue,
-        codeforcesValue,
-        overrides,
-      ),
-    )
+    onDraftChange(buildDraft(initialProfileDraft, usernameValue, leetcodeValue, codeforcesValue, overrides))
   }
 
   const handleContinueUsername = () => {
-    if (!usernameValue) {
-      setWarning('Add a username first so we can create your profile route.')
-      return
-    }
-
-    setWarning(null)
-    setUsername(usernameValue)
+    if (!usernameValue) { setWarning('Username is required.'); return }
     commitDraft({ username: usernameValue })
     advance('leetcode')
   }
 
   const handleLeetcodeEnter = () => {
-    if (!leetcodeValue) {
-      setWarning('Enter your LeetCode id or use Skip.')
-      return
-    }
-
-    setWarning(null)
-    setLeetcodeId(leetcodeValue)
+    if (!leetcodeValue) { setWarning('Enter your handle or skip.'); return }
     commitDraft({ leetcodeId: leetcodeValue })
     advance('codeforces')
   }
 
   const handleCodeforcesEnter = () => {
-    if (!codeforcesValue) {
-      setWarning('Enter your Codeforces id or use Skip.')
-      return
-    }
-
-    setWarning(null)
-    setCodeforcesId(codeforcesValue)
+    if (!codeforcesValue) { setWarning('Enter your handle or skip.'); return }
     commitDraft({ codeforcesId: codeforcesValue })
     advance('review')
   }
 
   const handleCreateProfile = async () => {
-    if (!usernameValue) {
-      setWarning('Username is required before the profile can be created.')
-      advance('username')
-      return
-    }
-
+    if (!usernameValue) { setWarning('Username is required.'); advance('username'); return }
     setIsSubmitting(true)
     setWarning(null)
-
-    const result = await onCreateProfile(
-      buildDraft(initialProfileDraft, usernameValue, leetcodeValue, codeforcesValue),
-    )
-
+    const result = await onCreateProfile(buildDraft(initialProfileDraft, usernameValue, leetcodeValue, codeforcesValue))
     setIsSubmitting(false)
-
-    if (!result.ok && result.warning) {
-      setWarning(result.warning)
-    }
-  }
-
-  const handleSkipLeetcode = () => {
-    setWarning(null)
-    setLeetcodeId('')
-    commitDraft({ leetcodeId: '' })
-    advance('codeforces')
-  }
-
-  const handleSkipCodeforces = () => {
-    setWarning(null)
-    setCodeforcesId('')
-    commitDraft({ codeforcesId: '' })
-    advance('review')
+    if (!result.ok && result.warning) setWarning(result.warning)
   }
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Enter' || event.shiftKey || event.metaKey || event.ctrlKey) {
-        return
-      }
-
+      if (event.key !== 'Enter' || event.shiftKey || event.metaKey || event.ctrlKey) return
       const target = event.target as HTMLElement | null
-      const tagName = target?.tagName || ''
-
-      if (tagName === 'TEXTAREA' || target?.getAttribute('data-skip-enter') === 'true') {
-        return
-      }
-
+      if (target?.tagName === 'TEXTAREA' || target?.getAttribute('data-skip-enter') === 'true') return
       event.preventDefault()
-
-      if (step === 'username') {
-        handleContinueUsername()
-        return
-      }
-
-      if (step === 'leetcode') {
-        handleLeetcodeEnter()
-        return
-      }
-
-      if (step === 'codeforces') {
-        handleCodeforcesEnter()
-        return
-      }
-
-      if (step === 'review' && !isSubmitting) {
-        void handleCreateProfile()
-      }
+      if (step === 'username') { handleContinueUsername(); return }
+      if (step === 'leetcode') { handleLeetcodeEnter(); return }
+      if (step === 'codeforces') { handleCodeforcesEnter(); return }
+      if (step === 'review' && !isSubmitting) void handleCreateProfile()
     }
-
     window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [codeforcesValue, isSubmitting, leetcodeValue, step, usernameValue])
 
   if (authSession.status !== 'connected') {
     return (
-      <main className="page-shell flex min-h-screen items-center justify-center bg-black px-6 py-10 text-white">
-        <div className="w-full max-w-xl rounded-[28px] border border-white/10 bg-[#080808] px-8 py-10 shadow-[0_24px_70px_rgba(0,0,0,0.35)]">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/40">
-            Onboarding
-          </p>
-          <h1 className="mt-4 text-4xl font-bold tracking-[-0.05em] text-white">
-            GitHub needs to be connected before onboarding starts.
+      <main className="flex min-h-screen items-center justify-center px-6" style={{ background: '#000' }}>
+        <div className="animate-fade-up card w-full" style={{ maxWidth: 400, padding: '32px' }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.03em', color: '#fff' }}>
+            GitHub auth required
           </h1>
-          <p className="mt-4 text-sm leading-7 text-white/50">
-            Your onboarding flow is locked until the GitHub OAuth step is completed.
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.44)', marginTop: 8, lineHeight: 1.6 }}>
+            Complete the GitHub OAuth step before continuing to onboarding.
           </p>
-          <button
-            className="mt-8 inline-flex min-h-11 items-center justify-center rounded-full border border-white/10 bg-white px-6 text-sm font-semibold text-black transition hover:bg-white/90"
-            onClick={onBackToAuth}
-            type="button"
-          >
+          <button className="btn-ghost mt-6" onClick={onBackToAuth} type="button">
             Back to authentication
           </button>
         </div>
@@ -259,248 +127,215 @@ export function OnboardingPage({
     )
   }
 
-  const meta = stepMeta[step]
-
   return (
-    <main className="page-shell min-h-screen bg-black px-6 py-10 text-white">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 pt-12">
-        <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-          <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/45">
-              Onboarding
-            </p>
-            <h1 className="mt-4 text-4xl font-bold tracking-[-0.06em] text-white md:text-6xl">
-              Shape your public developer profile one handle at a time.
-            </h1>
-            <p className="mt-6 max-w-2xl text-base leading-8 text-white/60">
-              GitHub is already connected. We just need a route name and any extra
-              coding handles you want included in the same annual contribution map.
-            </p>
+    <main
+      className="flex min-h-screen items-start justify-center px-6 py-16"
+      style={{ background: '#000' }}
+    >
+      <div className="animate-fade-up w-full" style={{ maxWidth: 760, paddingTop: 48 }}>
 
-            <div className="mt-10 flex flex-wrap gap-3">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white/75">
-                <GitBranch className="h-4 w-4 text-white/55" />
-                {githubLabel}
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white/75">
-                Step {activeStepNumber} of {stepOrder.length}
-              </span>
-            </div>
+        {/* Step progress row */}
+        <div className="mb-10 flex items-center gap-0">
+          {steps.map((s, i) => {
+            const isComplete = i < activeIndex
+            const isActive = s.id === step
 
-            <div className="mt-10 grid gap-3 sm:grid-cols-2">
-              {stepOrder.map((item, index) => {
-                const isActive = item === step
-                const isComplete = stepOrder.indexOf(item) < activeStepNumber - 1
-
-                return (
+            return (
+              <div key={s.id} className="flex items-center">
+                <div className="flex items-center gap-2">
                   <div
-                    className={`rounded-[18px] border px-4 py-4 transition ${
-                      isActive
-                        ? 'border-white/20 bg-white/[0.05]'
-                        : 'border-white/10 bg-white/[0.02]'
-                    }`}
-                    key={item}
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: '50%',
+                      border: isActive
+                        ? '1px solid rgba(255,255,255,0.5)'
+                        : isComplete
+                        ? 'none'
+                        : '1px solid rgba(255,255,255,0.12)',
+                      background: isComplete ? '#fff' : isActive ? 'rgba(255,255,255,0.06)' : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                        0{index + 1}
-                      </p>
-                      {isComplete ? (
-                        <Check className="h-4 w-4 text-white/65" />
-                      ) : null}
-                    </div>
-                    <p className="mt-3 text-base font-semibold text-white">
-                      {stepMeta[item].label}
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-white/45">
-                      {stepMeta[item].description}
-                    </p>
+                    {isComplete ? (
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <path d="M2 5l2 2 4-4" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    ) : (
+                      <span className="mono" style={{ fontSize: 9, color: isActive ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.2)' }}>
+                        {i + 1}
+                      </span>
+                    )}
                   </div>
-                )
-              })}
-            </div>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: isActive ? 600 : 400,
+                      color: isActive ? 'rgba(255,255,255,0.8)' : isComplete ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.24)',
+                    }}
+                  >
+                    {s.label}
+                    {s.optional && (
+                      <span style={{ color: 'rgba(255,255,255,0.2)', fontWeight: 400 }}> (optional)</span>
+                    )}
+                  </span>
+                </div>
+                {i < steps.length - 1 && (
+                  <div style={{ width: 32, height: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px' }} />
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Step card */}
+        <div className="card" style={{ padding: '36px 36px 40px', borderRadius: 14 }} key={`${step}-${stepKey}`}>
+          <div style={{ marginBottom: 28 }}>
+            <span className="section-label" style={{ marginBottom: 8, display: 'block' }}>
+              {steps[activeIndex]?.label}
+              {steps[activeIndex]?.optional && ' — optional'}
+            </span>
+            <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.03em', color: '#fff', lineHeight: 1.2 }}>
+              {step === 'username' && 'Choose your public profile handle.'}
+              {step === 'leetcode' && 'Link your LeetCode account.'}
+              {step === 'codeforces' && 'Link your Codeforces account.'}
+              {step === 'review' && 'Looks good? Publish your profile.'}
+            </h2>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.42)', marginTop: 8, lineHeight: 1.6 }}>
+              {step === 'username' && 'This becomes your route: devtrackr.app/@yourname. Only alphanumeric and dashes.'}
+              {step === 'leetcode' && 'We will track accepted submissions and include them in your streak and heatmap.'}
+              {step === 'codeforces' && 'Contest-style problem solves will appear in your daily digest and contribution map.'}
+              {step === 'review' && 'Once created, you will be taken straight to your live profile page.'}
+            </p>
           </div>
 
-          <section className="stage-card rounded-[28px] border border-white/10 bg-[#090909] p-6 shadow-[0_24px_70px_rgba(0,0,0,0.35)] md:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/40">
-              {meta.label}
-            </p>
-            <h2 className="mt-4 text-3xl font-bold tracking-[-0.05em] text-white">
-              {meta.title}
-            </h2>
-            <p className="mt-4 text-sm leading-7 text-white/50">{meta.description}</p>
-
-            <div className="mt-8" key={`${step}-${stepKey}`}>
-              {step === 'username' ? (
-                <div>
-                  <label className="block">
-                    <span className="mb-3 flex items-center gap-2 text-sm font-medium text-white/70">
-                      <UserRound className="h-4 w-4 text-white/45" />
-                      Username
-                    </span>
-                    <input
-                      autoFocus
-                      className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-4 text-base text-white outline-none transition placeholder:text-white/25 focus:border-white/20"
-                      onChange={(event) => {
-                        setUsername(event.target.value)
-                      }}
-                      placeholder="@yourname"
-                      type="text"
-                      value={username}
-                    />
-                  </label>
-
-                  <button
-                    className="mt-8 inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-semibold text-black transition hover:bg-white/90"
-                    onClick={handleContinueUsername}
-                    type="button"
-                  >
-                    Continue
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                </div>
-              ) : null}
-
-              {step === 'leetcode' ? (
-                <div>
-                  <label className="block">
-                    <span className="mb-3 flex items-center gap-2 text-sm font-medium text-white/70">
-                      <Code2 className="h-4 w-4 text-white/45" />
-                      LeetCode handle
-                    </span>
-                    <input
-                      autoFocus
-                      className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-4 text-base text-white outline-none transition placeholder:text-white/25 focus:border-white/20"
-                      onChange={(event) => {
-                        setLeetcodeId(event.target.value)
-                      }}
-                      placeholder="tourist"
-                      type="text"
-                      value={leetcodeId}
-                    />
-                  </label>
-
-                  <div className="mt-8 flex flex-wrap gap-3">
-                    <button
-                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-semibold text-black transition hover:bg-white/90"
-                      onClick={handleLeetcodeEnter}
-                      type="button"
-                    >
-                      Continue
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
-                    <button
-                      className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] px-6 text-sm font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white"
-                      onClick={handleSkipLeetcode}
-                      type="button"
-                    >
-                      Skip for now
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
-              {step === 'codeforces' ? (
-                <div>
-                  <label className="block">
-                    <span className="mb-3 flex items-center gap-2 text-sm font-medium text-white/70">
-                      <Code2 className="h-4 w-4 text-white/45" />
-                      Codeforces handle
-                    </span>
-                    <input
-                      autoFocus
-                      className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-4 text-base text-white outline-none transition placeholder:text-white/25 focus:border-white/20"
-                      onChange={(event) => {
-                        setCodeforcesId(event.target.value)
-                      }}
-                      placeholder="tourist"
-                      type="text"
-                      value={codeforcesId}
-                    />
-                  </label>
-
-                  <div className="mt-8 flex flex-wrap gap-3">
-                    <button
-                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-semibold text-black transition hover:bg-white/90"
-                      onClick={handleCodeforcesEnter}
-                      type="button"
-                    >
-                      Continue
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
-                    <button
-                      className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] px-6 text-sm font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white"
-                      onClick={handleSkipCodeforces}
-                      type="button"
-                    >
-                      Skip for now
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
-              {step === 'review' ? (
-                <div>
-                  <div className="space-y-3">
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-white/40">
-                        Username
-                      </p>
-                      <p className="mt-2 text-lg font-semibold text-white">
-                        @{usernameValue}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-white/40">
-                        GitHub
-                      </p>
-                      <p className="mt-2 text-lg font-semibold text-white">
-                        {githubLabel}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-white/40">
-                        LeetCode
-                      </p>
-                      <p className="mt-2 text-lg font-semibold text-white">
-                        {leetcodeValue || 'Skipped for now'}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-white/40">
-                        Codeforces
-                      </p>
-                      <p className="mt-2 text-lg font-semibold text-white">
-                        {codeforcesValue || 'Skipped for now'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    className="mt-8 inline-flex min-h-11 items-center justify-center rounded-full bg-white px-6 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={isSubmitting}
-                    onClick={() => {
-                      void handleCreateProfile()
-                    }}
-                    type="button"
-                  >
-                    {isSubmitting ? 'Creating profile...' : 'Create profile'}
-                  </button>
-                </div>
-              ) : null}
-
-              {warning ? (
-                <p className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm leading-6 text-white/70">
-                  {warning}
-                </p>
-              ) : null}
-
-              <p className="mt-6 text-xs leading-6 text-white/35">
-                Press Enter to continue on each step.
-              </p>
+          {/* Field */}
+          {step === 'username' && (
+            <div>
+              <div className="flex items-center overflow-hidden rounded-lg" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                <span style={{ padding: '10px 12px', fontSize: 13, color: 'rgba(255,255,255,0.24)', background: 'rgba(255,255,255,0.03)', borderRight: '1px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap' }}>
+                  @
+                </span>
+                <input
+                  autoFocus
+                  className="dt-input"
+                  style={{ border: 'none', borderRadius: 0 }}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="yourhandle"
+                  type="text"
+                  value={username}
+                />
+              </div>
+              {authSession.githubHandle && (
+                <button
+                  className="mt-2 text-left"
+                  style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                  onClick={() => setUsername(authSession.githubHandle || '')}
+                  type="button"
+                >
+                  Use GitHub handle: {authSession.githubHandle}
+                </button>
+              )}
             </div>
-          </section>
-        </section>
+          )}
+
+          {(step === 'leetcode' || step === 'codeforces') && (
+            <input
+              autoFocus
+              className="dt-input"
+              onChange={(e) => step === 'leetcode' ? setLeetcodeId(e.target.value) : setCodeforcesId(e.target.value)}
+              placeholder="tourist"
+              type="text"
+              value={step === 'leetcode' ? leetcodeId : codeforcesId}
+            />
+          )}
+
+          {step === 'review' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                { label: 'Username', value: `@${usernameValue}` },
+                { label: 'GitHub', value: authSession.githubHandle || '—' },
+                { label: 'LeetCode', value: leetcodeValue || 'Not connected' },
+                { label: 'Codeforces', value: codeforcesValue || 'Not connected' },
+              ].map((row) => (
+                <div
+                  key={row.label}
+                  className="flex items-center justify-between"
+                  style={{
+                    padding: '10px 14px',
+                    background: 'rgba(255,255,255,0.025)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    borderRadius: 8,
+                  }}
+                >
+                  <span className="section-label">{row.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-mono)' }}>
+                    {row.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Warning */}
+          {warning && (
+            <div
+              className="mt-4 rounded-lg px-3.5 py-3"
+              style={{ border: '1px solid rgba(255,80,80,0.2)', background: 'rgba(255,80,80,0.06)', fontSize: 12, color: 'rgba(255,160,160,0.9)' }}
+            >
+              {warning}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="mt-8 flex items-center gap-3">
+            {step !== 'review' ? (
+              <>
+                <button
+                  className="btn-primary"
+                  style={{ height: 38 }}
+                  onClick={
+                    step === 'username' ? handleContinueUsername
+                    : step === 'leetcode' ? handleLeetcodeEnter
+                    : handleCodeforcesEnter
+                  }
+                  type="button"
+                >
+                  Continue <ArrowRight size={13} />
+                </button>
+                {(step === 'leetcode' || step === 'codeforces') && (
+                  <button
+                    className="btn-ghost"
+                    style={{ height: 38 }}
+                    onClick={step === 'leetcode'
+                      ? () => { setWarning(null); setLeetcodeId(''); commitDraft({ leetcodeId: '' }); advance('codeforces') }
+                      : () => { setWarning(null); setCodeforcesId(''); commitDraft({ codeforcesId: '' }); advance('review') }}
+                    type="button"
+                  >
+                    Skip
+                  </button>
+                )}
+              </>
+            ) : (
+              <button
+                className="btn-primary"
+                style={{ height: 38, opacity: isSubmitting ? 0.6 : 1 }}
+                disabled={isSubmitting}
+                onClick={() => void handleCreateProfile()}
+                type="button"
+              >
+                {isSubmitting ? 'Creating profile…' : 'Create profile'}
+              </button>
+            )}
+          </div>
+
+          <p className="mt-5 section-label">
+            Press Enter to continue at each step
+          </p>
+        </div>
       </div>
     </main>
   )

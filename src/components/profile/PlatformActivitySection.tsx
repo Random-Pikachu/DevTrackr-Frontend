@@ -1,5 +1,5 @@
-import { ChevronDown, Code2, GitBranch, Zap } from 'lucide-react'
 import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import type { BackendActivity } from '../../types/app'
 
 type PlatformActivitySectionProps = {
@@ -9,85 +9,135 @@ type PlatformActivitySectionProps = {
   title: string
 }
 
-const platformIcons = {
-  github: GitBranch,
-  codeforces: Code2,
-  leetcode: Zap,
+function GitHubEntry({ activity }: { activity: BackendActivity }) {
+  const meta = activity.metadata || {}
+  const repoUrl = meta.repo ? `https://github.com/${meta.repo}` : null
+  const messages: string[] = meta.messages || []
+
+  return (
+    <div style={{ padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          {repoUrl ? (
+            <a
+              href={repoUrl}
+              rel="noreferrer"
+              target="_blank"
+              style={{ fontSize: 13, fontWeight: 600, color: '#fff', textDecoration: 'underline', textDecorationColor: 'rgba(255,255,255,0.2)', textUnderlineOffset: 3 }}
+            >
+              {meta.repo}
+            </a>
+          ) : (
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{meta.repo || 'Repository activity'}</p>
+          )}
+          <p className="mono mt-1" style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+            {meta.commit_count || 0} commit{(meta.commit_count || 0) !== 1 ? 's' : ''}
+          </p>
+        </div>
+      </div>
+      {messages.length > 0 && (
+        <div className="mt-2.5 space-y-1 border-l-2 pl-3" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+          {messages.map((msg) => (
+            <p key={msg} style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', fontStyle: 'italic', lineHeight: 1.5 }}>
+              {msg.trim()}
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
-function ActivityEntry({ activity }: { activity: BackendActivity }) {
-  const metadata = activity.metadata || {}
+function CodeforcesEntry({ activity }: { activity: BackendActivity }) {
+  const meta = activity.metadata || {}
+  const tags: string[] = meta.tags || []
 
-  if (activity.platform === 'github') {
-    const repoUrl = metadata.repo ? `https://github.com/${metadata.repo}` : null
-    const messages = metadata.messages || []
-
-    return (
-      <div className="space-y-2 text-xs">
-        {repoUrl ? (
-          <a
-            className="font-semibold text-white transition hover:text-orange-300"
-            href={repoUrl}
-            rel="noreferrer"
-            target="_blank"
-          >
-            {metadata.repo}
-          </a>
-        ) : (
-          <p className="font-semibold text-white">
-            {metadata.repo || 'Repository activity'}
+  return (
+    <div style={{ padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
+            {meta.problem_name || 'Problem submission'}
           </p>
+          <p className="mono mt-1" style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+            {meta.verdict || activity.activity_type}
+            {meta.rating ? ` · Rating ${meta.rating}` : ''}
+          </p>
+        </div>
+        {meta.verdict && (
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              fontFamily: 'var(--font-mono)',
+              padding: '2px 7px',
+              borderRadius: 4,
+              border: '1px solid',
+              borderColor: meta.verdict === 'OK' ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.1)',
+              color: meta.verdict === 'OK' ? 'rgba(52,211,153,0.9)' : 'rgba(255,255,255,0.4)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {meta.verdict}
+          </span>
         )}
-        <p className="text-white/50">
-          {metadata.commit_count || 0} commit
-          {(metadata.commit_count || 0) === 1 ? '' : 's'} captured
-        </p>
-        {messages.length > 0 ? (
-          <div className="space-y-1 border-l border-white/10 pl-3">
-            {messages.map((message) => (
-              <p className="text-white/40 italic" key={message}>
-                {message.trim()}
-              </p>
-            ))}
-          </div>
-        ) : null}
       </div>
-    )
-  }
+      {tags.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {tags.map((t) => (
+            <span key={t} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)' }}>
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
-  if (activity.platform === 'codeforces') {
-    const tags = metadata.tags || []
+function LeetCodeEntry({ activity }: { activity: BackendActivity }) {
+  const meta = activity.metadata || {}
+  const status = meta.status || meta.verdict || activity.activity_type
 
-    return (
-      <div className="space-y-2 text-xs">
-        <p className="font-semibold text-white">
-          {metadata.problem_name || 'Problem submission'}
-        </p>
-        <p className="text-white/50">
-          Verdict: {metadata.verdict || activity.activity_type} • Rating: +
-          {metadata.rating || 0}
-        </p>
-        {tags.length > 0 ? (
-          <p className="text-white/40">{tags.join(', ')}</p>
-        ) : null}
-      </div>
-    )
+  const difficultyColor: Record<string, string> = {
+    Easy: 'rgba(52,211,153,0.9)',
+    Medium: 'rgba(251,191,36,0.9)',
+    Hard: 'rgba(248,113,113,0.9)',
   }
 
   return (
-    <div className="space-y-2 text-xs">
-      <p className="font-semibold text-white">
-        {metadata.problem_name || metadata.title || 'LeetCode problem'}
-      </p>
-      <p className="text-white/50">
-        Difficulty: {metadata.difficulty || 'Unknown'} • Status:{' '}
-        {metadata.status || metadata.verdict || activity.activity_type}
-      </p>
-      {metadata.title_slug ? (
-        <p className="text-white/40">{metadata.title_slug}</p>
-      ) : null}
+    <div style={{ padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
+            {meta.problem_name || meta.title || 'LeetCode problem'}
+          </p>
+          <p className="mono mt-1" style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+            {status}
+            {meta.difficulty ? ` · ${meta.difficulty}` : ''}
+          </p>
+        </div>
+        {meta.difficulty && (
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              fontFamily: 'var(--font-mono)',
+              color: difficultyColor[meta.difficulty] || 'rgba(255,255,255,0.4)',
+            }}
+          >
+            {meta.difficulty}
+          </span>
+        )}
+      </div>
     </div>
   )
+}
+
+const platformColors: Record<string, string> = {
+  github: 'rgba(255,255,255,0.9)',
+  leetcode: 'rgba(251,191,36,0.8)',
+  codeforces: 'rgba(96,165,250,0.8)',
 }
 
 export function PlatformActivitySection({
@@ -97,51 +147,104 @@ export function PlatformActivitySection({
   title,
 }: PlatformActivitySectionProps) {
   const [isExpanded, setIsExpanded] = useState(platform === 'github')
-  const Icon = platformIcons[platform]
+  const hasActivity = activities.length > 0
 
   return (
-    <section className="overflow-hidden rounded-[14px] border border-white/10 bg-white/[0.01]">
+    <div
+      style={{
+        border: '1px solid rgba(255,255,255,0.07)',
+        borderRadius: 10,
+        overflow: 'hidden',
+      }}
+    >
+      {/* Header */}
       <button
-        className="flex w-full items-center gap-3 px-4 py-4 text-left transition hover:bg-white/[0.03]"
-        onClick={() => {
-          if (activities.length === 0) {
-            return
-          }
-
-          setIsExpanded((current) => !current)
+        className="w-full flex items-center gap-3 text-left"
+        style={{
+          padding: '12px 16px',
+          background: hasActivity ? 'rgba(255,255,255,0.02)' : 'transparent',
+          cursor: hasActivity ? 'pointer' : 'default',
+          border: 'none',
+          transition: 'background 0.15s',
         }}
+        onClick={() => { if (hasActivity) setIsExpanded((c) => !c) }}
+        onMouseEnter={(e) => { if (hasActivity) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = hasActivity ? 'rgba(255,255,255,0.02)' : 'transparent' }}
         type="button"
       >
-        <Icon className="h-4 w-4 text-white/55" />
-        <span className="flex-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/50">
+        {/* Dot */}
+        <span
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: hasActivity ? platformColors[platform] : 'rgba(255,255,255,0.15)',
+            flexShrink: 0,
+          }}
+        />
+
+        <span
+          style={{
+            flex: 1,
+            fontSize: 12,
+            fontWeight: 600,
+            fontFamily: 'var(--font-mono)',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            color: hasActivity ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.24)',
+          }}
+        >
           {title}
         </span>
+
         <span
-          className={`text-xs ${
-            activities.length > 0 ? 'font-medium text-orange-400' : 'text-white/30'
-          }`}
+          className="mono"
+          style={{
+            fontSize: 11,
+            color: hasActivity ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)',
+          }}
         >
-          {activities.length} entr{activities.length === 1 ? 'y' : 'ies'}
+          {activities.length} {activities.length === 1 ? 'entry' : 'entries'}
         </span>
-        {activities.length > 0 ? (
+
+        {hasActivity && (
           <ChevronDown
-            className={`h-4 w-4 text-white/35 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+            size={13}
+            style={{
+              color: 'rgba(255,255,255,0.3)',
+              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.18s',
+            }}
           />
-        ) : null}
+        )}
       </button>
 
-      {activities.length === 0 ? (
-        <div className="border-t border-white/10 px-4 pb-4 pt-2 text-xs text-white/40">
-          No {title.toLowerCase()} activity recorded for this date.
+      {/* Empty */}
+      {!hasActivity && (
+        <div style={{ padding: '10px 16px 14px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>
+            No {title} activity for this date.
+          </p>
         </div>
-      ) : isExpanded ? (
-        <div className="space-y-3 border-t border-white/10 p-4">
-          <p className="text-xs leading-5 text-white/35">{description}</p>
-          {activities.map((activity) => (
-            <ActivityEntry activity={activity} key={activity.id} />
-          ))}
+      )}
+
+      {/* Content */}
+      {hasActivity && isExpanded && (
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '0 16px' }}>
+          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', padding: '10px 0 4px', lineHeight: 1.5 }}>
+            {description}
+          </p>
+          {activities.map((activity) =>
+            platform === 'github' ? (
+              <GitHubEntry key={activity.id} activity={activity} />
+            ) : platform === 'codeforces' ? (
+              <CodeforcesEntry key={activity.id} activity={activity} />
+            ) : (
+              <LeetCodeEntry key={activity.id} activity={activity} />
+            )
+          )}
         </div>
-      ) : null}
-    </section>
+      )}
+    </div>
   )
 }

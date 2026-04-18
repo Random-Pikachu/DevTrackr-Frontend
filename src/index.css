@@ -1,153 +1,282 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
 @import "react-calendar-heatmap/dist/styles.css";
 @import "tailwindcss";
 
-* {
-  box-sizing: border-box;
+:root {
+  --bg: #000000;
+  --bg-2: #080808;
+  --bg-3: #0f0f0f;
+  --bg-4: #141414;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-hover: rgba(255, 255, 255, 0.14);
+  --fg: #ffffff;
+  --fg-2: rgba(255, 255, 255, 0.72);
+  --fg-3: rgba(255, 255, 255, 0.44);
+  --fg-4: rgba(255, 255, 255, 0.24);
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
+
+*, *::before, *::after { box-sizing: border-box; }
 
 html {
   scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   margin: 0;
   min-width: 320px;
-  background: #000;
-  color: #fff;
-  font-family: "Manrope", "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-img {
-  display: block;
-  max-width: 100%;
-}
+img { display: block; max-width: 100%; }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+a { color: inherit; text-decoration: none; }
 
-button,
-a {
-  -webkit-tap-highlight-color: transparent;
-}
+button, a { -webkit-tap-highlight-color: transparent; }
 
-#root {
-  min-height: 100vh;
-}
+#root { min-height: 100vh; }
 
-.page-shell {
-  animation: page-enter 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
+/* ─── Typography helpers ────────────────────────────────────────────── */
+.mono { font-family: var(--font-mono); }
 
-.stage-card {
-  animation: stage-enter 0.42s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-@keyframes page-enter {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes stage-enter {
-  from {
-    opacity: 0;
-    transform: translateY(22px) scale(0.985);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.heatmap-shell .react-calendar-heatmap {
-  width: 100%;
-}
+/* ─── Heatmap overrides ─────────────────────────────────────────────── */
+.heatmap-shell .react-calendar-heatmap { width: 100%; }
 
 .heatmap-shell .react-calendar-heatmap text {
-  fill: rgba(255, 255, 255, 0.44);
-  font-size: 10px;
-  font-weight: 600;
+  fill: var(--fg-4);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
 }
 
 .heatmap-shell .react-calendar-heatmap rect {
-  rx: 999px;
-  ry: 999px;
+  rx: 3px;
+  ry: 3px;
   stroke: transparent;
-  stroke-width: 0;
-  transition: fill 0.18s ease;
+  transition: opacity 0.15s ease;
 }
+
+.heatmap-shell .react-calendar-heatmap rect:hover { opacity: 0.8; }
 
 .heatmap-shell .react-calendar-heatmap .heat-empty {
-  fill: rgba(255, 255, 255, 0.1);
+  fill: #111111;
 }
 
-.heatmap-shell .react-calendar-heatmap .heat-level-1 {
-  fill: #f7d4ae;
+.heatmap-shell .react-calendar-heatmap .heat-level-1 { fill: #1e3a2f; }
+.heatmap-shell .react-calendar-heatmap .heat-level-2 { fill: #1e6040; }
+.heatmap-shell .react-calendar-heatmap .heat-level-3 { fill: #26a05a; }
+.heatmap-shell .react-calendar-heatmap .heat-level-4 { fill: #3dd68c; }
+
+/* ─── Scrollbar ─────────────────────────────────────────────────────── */
+.dt-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }
 
-.heatmap-shell .react-calendar-heatmap .heat-level-2 {
-  fill: #ffbf72;
+.dt-scrollbar::-webkit-scrollbar { width: 5px; }
+.dt-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.dt-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
 }
 
-.heatmap-shell .react-calendar-heatmap .heat-level-3 {
-  fill: #ff9827;
-}
-
-.heatmap-shell .react-calendar-heatmap .heat-level-4 {
-  fill: #ff7a00;
-}
-
-.heatmap-shell .react-calendar-heatmap .react-calendar-heatmap-weekday-label,
-.heatmap-shell .react-calendar-heatmap .react-calendar-heatmap-month-label {
-  font-size: 10px;
-}
-
+/* ─── Date input ────────────────────────────────────────────────────── */
 input[type='date']::-webkit-calendar-picker-indicator {
   cursor: pointer;
-  filter: invert(1) opacity(0.6);
+  filter: invert(1) opacity(0.4);
 }
 
-.settings-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(170, 170, 170, 0.9) rgba(255, 255, 255, 0.06);
+/* ─── Focus ring ─────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 1.5px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
-.settings-scrollbar::-webkit-scrollbar {
-  width: 12px;
+/* ─── Grain overlay ──────────────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px;
+  opacity: 0.65;
 }
 
-.settings-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.04);
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 999px;
+/* ─── Page/card animations (CSS-based base layer) ───────────────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.settings-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #a8a8a8 0%, #8c8c8c 55%, #6f6f6f 100%);
-  border: 2px solid rgba(8, 8, 8, 0.95);
-  border-radius: 999px;
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-.settings-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #b9b9b9 0%, #989898 55%, #7c7c7c 100%);
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
 }
 
-.settings-scrollbar::-webkit-scrollbar-button {
-  display: none;
-  width: 0;
-  height: 0;
+.animate-fade-up {
+  animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.settings-scrollbar::-webkit-scrollbar-corner {
+.animate-fade-in {
+  animation: fade-in 0.4s ease both;
+}
+
+/* ─── Stagger delays ─────────────────────────────────────────────────── */
+.delay-50  { animation-delay: 50ms;  }
+.delay-100 { animation-delay: 100ms; }
+.delay-150 { animation-delay: 150ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-250 { animation-delay: 250ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+
+/* ─── Skeleton shimmer ───────────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, #111 25%, #1a1a1a 37%, #111 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+/* ─── Button base ────────────────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  background: #fff;
+  color: #000;
+  border: 1px solid #fff;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  letter-spacing: -0.01em;
+}
+
+.btn-primary:hover { background: rgba(255,255,255,0.9); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
   background: transparent;
+  color: var(--fg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.btn-ghost:hover {
+  border-color: var(--border-hover);
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ─── Card ───────────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── Input ──────────────────────────────────────────────────────────── */
+.dt-input {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.dt-input::placeholder { color: var(--fg-4); }
+.dt-input:focus { border-color: rgba(255,255,255,0.24); }
+
+/* ─── Toggle ─────────────────────────────────────────────────────────── */
+.dt-toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+
+.dt-toggle[data-checked="true"] {
+  background: #fff;
+  border-color: #fff;
+}
+
+.dt-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s;
+}
+
+.dt-toggle[data-checked="true"]::after {
+  transform: translateX(18px);
+  background: #000;
+}
+
+/* ─── Section label ──────────────────────────────────────────────────── */
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-4);
+}
+
+/* ─── Divider ────────────────────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: var(--border);
 }

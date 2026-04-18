@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import {
-  Check,
-  Shield,
-  X,
-} from 'lucide-react'
+import { X, Check, AlertCircle } from 'lucide-react'
 import {
   createIntegrationForUser,
   disconnectIntegrationForUser,
@@ -31,131 +27,168 @@ type SettingsDialogProps = {
   profileUser: BackendUser
 }
 
-type ToggleRowProps = {
-  checked: boolean
-  description: string
-  disabled?: boolean
-  label: string
-  onChange: (nextChecked: boolean) => void
+// ─── Toggle ──────────────────────────────────────────────────────────────────
+function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <button
+      aria-pressed={checked}
+      className="dt-toggle"
+      data-checked={checked ? 'true' : 'false'}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      type="button"
+      style={{ opacity: disabled ? 0.4 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}
+    />
+  )
 }
 
-function ToggleRow({
-  checked,
-  description,
-  disabled,
-  label,
-  onChange,
-}: ToggleRowProps) {
+// ─── Row with label ───────────────────────────────────────────────────────────
+function SettingRow({ label, description, children }: { label: string; description?: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-4">
-      <div>
-        <p className="text-sm font-semibold text-white">{label}</p>
-        <p className="mt-1 text-sm leading-6 text-white/45">{description}</p>
+    <div
+      className="flex items-start justify-between gap-6"
+      style={{ padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.8)' }}>{label}</p>
+        {description && (
+          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 3, lineHeight: 1.5 }}>
+            {description}
+          </p>
+        )}
       </div>
-      <button
-        aria-pressed={checked}
-        className={`relative mt-0.5 inline-flex h-7 w-12 shrink-0 rounded-full border transition ${
-          checked
-            ? 'border-orange-400 bg-orange-400'
-            : 'border-white/15 bg-white/[0.06]'
-        } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
-        disabled={disabled}
-        onClick={() => {
-          onChange(!checked)
-        }}
-        type="button"
-      >
-        <span
-          className={`absolute top-0.5 h-[22px] w-[22px] rounded-full bg-white transition ${
-            checked ? 'left-[23px]' : 'left-0.5'
-          }`}
-        />
-      </button>
+      <div className="flex-shrink-0">{children}</div>
     </div>
   )
 }
 
-function IntegrationCard({
-  actionLabel,
-  description,
-  handleValue,
-  inputPlaceholder,
-  isBusy,
-  isConnected,
-  onAction,
-  onDisconnect,
-  onHandleChange,
+// ─── Section ─────────────────────────────────────────────────────────────────
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 28 }}>
+      <p
+        className="section-label"
+        style={{ marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        {title}
+      </p>
+      {children}
+    </div>
+  )
+}
+
+// ─── Integration row ──────────────────────────────────────────────────────────
+function IntegrationRow({
   title,
+  description,
+  isConnected,
+  connectedHandle,
+  handleValue,
+  onHandleChange,
+  onConnect,
+  onDisconnect,
+  isBusy,
+  inputPlaceholder,
 }: {
-  actionLabel: string
-  description: string
-  handleValue: string
-  inputPlaceholder: string
-  isBusy: boolean
-  isConnected: boolean
-  onAction: () => void
-  onDisconnect?: () => void
-  onHandleChange?: (value: string) => void
   title: string
+  description: string
+  isConnected: boolean
+  connectedHandle?: string
+  handleValue: string
+  onHandleChange?: (v: string) => void
+  onConnect: () => void
+  onDisconnect?: () => void
+  isBusy: boolean
+  inputPlaceholder: string
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+    <div
+      style={{
+        padding: '16px',
+        border: '1px solid rgba(255,255,255,0.07)',
+        borderRadius: 10,
+        background: 'rgba(255,255,255,0.015)',
+        marginBottom: 8,
+      }}
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-white">{title}</p>
-          <p className="mt-1 text-sm leading-6 text-white/45">{description}</p>
+          <div className="flex items-center gap-2">
+            <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>{title}</p>
+            <span
+              style={{
+                fontSize: 10,
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 500,
+                padding: '2px 6px',
+                borderRadius: 4,
+                border: '1px solid',
+                borderColor: isConnected ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.1)',
+                color: isConnected ? 'rgba(52,211,153,0.85)' : 'rgba(255,255,255,0.3)',
+              }}
+            >
+              {isConnected ? 'Connected' : 'Not connected'}
+            </span>
+          </div>
+          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 4, lineHeight: 1.5 }}>
+            {description}
+          </p>
         </div>
-        <span
-          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-            isConnected
-              ? 'bg-orange-400/15 text-orange-300'
-              : 'bg-white/[0.06] text-white/45'
-          }`}
-        >
-          {isConnected ? 'Connected' : 'Not connected'}
-        </span>
       </div>
 
-      {onHandleChange ? (
-        <input
-          className="mt-4 w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-white/20"
-          onChange={(event) => {
-            onHandleChange(event.target.value)
+      {isConnected && connectedHandle && (
+        <div
+          className="mono mt-3"
+          style={{
+            fontSize: 12,
+            padding: '7px 10px',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: 6,
+            color: 'rgba(255,255,255,0.55)',
           }}
+        >
+          {connectedHandle}
+        </div>
+      )}
+
+      {onHandleChange && (
+        <input
+          className="dt-input mt-3"
+          onChange={(e) => onHandleChange(e.target.value)}
           placeholder={inputPlaceholder}
           type="text"
           value={handleValue}
         />
-      ) : handleValue ? (
-        <div className="mt-4 rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white/75">
-          {handleValue}
-        </div>
-      ) : null}
+      )}
 
-      <div className="mt-4 flex flex-wrap gap-3">
+      <div className="mt-4 flex flex-wrap gap-2">
         <button
-          className="inline-flex min-h-10 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn-primary"
+          style={{ height: 32, fontSize: 12 }}
           disabled={isBusy}
-          onClick={onAction}
+          onClick={onConnect}
           type="button"
         >
-          {isBusy ? 'Working...' : actionLabel}
+          {isBusy ? 'Working…' : isConnected ? `Update ${title}` : `Connect ${title}`}
         </button>
-        {isConnected && onDisconnect ? (
+        {isConnected && onDisconnect && (
           <button
-            className="inline-flex min-h-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] px-4 text-sm font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-ghost"
+            style={{ height: 32, fontSize: 12 }}
             disabled={isBusy}
             onClick={onDisconnect}
             type="button"
           >
             Disconnect
           </button>
-        ) : null}
+        )}
       </div>
     </div>
   )
 }
 
+// ─── Main dialog ─────────────────────────────────────────────────────────────
 export function SettingsDialog({
   authSession,
   initialProfileDraft,
@@ -167,18 +200,12 @@ export function SettingsDialog({
   profileUser,
 }: SettingsDialogProps) {
   const [username, setUsername] = useState(profileUser.publicSlug || profileUser.username || '')
-  const [isPublicProfile, setIsPublicProfile] = useState(
-    profileUser.profilePublic ?? false,
-  )
+  const [isPublicProfile, setIsPublicProfile] = useState(profileUser.profilePublic ?? false)
   const [emailOptIn, setEmailOptIn] = useState(profileUser.emailOptIn ?? true)
   const [digestTime, setDigestTime] = useState(profileUser.digestTime || '20:00')
   const [integrations, setIntegrations] = useState<BackendIntegration[]>([])
-  const [leetcodeHandle, setLeetcodeHandle] = useState(
-    initialProfileDraft.leetcodeId || profileUser.leetcodeHandle || '',
-  )
-  const [codeforcesHandle, setCodeforcesHandle] = useState(
-    initialProfileDraft.codeforcesId || profileUser.codeforcesHandle || '',
-  )
+  const [leetcodeHandle, setLeetcodeHandle] = useState(initialProfileDraft.leetcodeId || profileUser.leetcodeHandle || '')
+  const [codeforcesHandle, setCodeforcesHandle] = useState(initialProfileDraft.codeforcesId || profileUser.codeforcesHandle || '')
   const [isSavingUsername, setIsSavingUsername] = useState(false)
   const [isSavingPrivacy, setIsSavingPrivacy] = useState(false)
   const [isSavingNotifications, setIsSavingNotifications] = useState(false)
@@ -186,519 +213,325 @@ export function SettingsDialog({
   const [feedback, setFeedback] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const githubIntegration = useMemo(
-    () => integrations.find((integration) => integration.platform === 'github'),
-    [integrations],
-  )
-  const leetcodeIntegration = useMemo(
-    () => integrations.find((integration) => integration.platform === 'leetcode'),
-    [integrations],
-  )
-  const codeforcesIntegration = useMemo(
-    () => integrations.find((integration) => integration.platform === 'codeforces'),
-    [integrations],
-  )
-  const timezoneLabel =
-    !profileUser.timezone || profileUser.timezone === 'UTC'
-      ? 'IST'
-      : profileUser.timezone
+  const githubIntegration = useMemo(() => integrations.find((i) => i.platform === 'github'), [integrations])
+  const leetcodeIntegration = useMemo(() => integrations.find((i) => i.platform === 'leetcode'), [integrations])
+  const codeforcesIntegration = useMemo(() => integrations.find((i) => i.platform === 'codeforces'), [integrations])
+
+  const timezoneLabel = !profileUser.timezone || profileUser.timezone === 'UTC' ? 'IST' : profileUser.timezone
 
   useEffect(() => {
-    if (!isOpen) {
-      return
-    }
-
+    if (!isOpen) return
     setUsername(profileUser.publicSlug || profileUser.username || '')
     setIsPublicProfile(profileUser.profilePublic ?? false)
     setEmailOptIn(profileUser.emailOptIn ?? true)
     setDigestTime(profileUser.digestTime || '20:00')
     setLeetcodeHandle(initialProfileDraft.leetcodeId || profileUser.leetcodeHandle || '')
-    setCodeforcesHandle(
-      initialProfileDraft.codeforcesId || profileUser.codeforcesHandle || '',
-    )
+    setCodeforcesHandle(initialProfileDraft.codeforcesId || profileUser.codeforcesHandle || '')
     setFeedback(null)
     setError(null)
 
     void fetchActiveIntegrationsForUser(profileUser.id)
-      .then((items) => {
-        setIntegrations(items)
-      })
-      .catch((caughtError) => {
-        const message =
-          caughtError instanceof Error
-            ? caughtError.message
-            : 'Unable to load integrations.'
-        setError(message)
-      })
+      .then(setIntegrations)
+      .catch((e) => setError(e instanceof Error ? e.message : 'Unable to load integrations.'))
   }, [initialProfileDraft.codeforcesId, initialProfileDraft.leetcodeId, isOpen, profileUser])
 
   useEffect(() => {
-    if (!isOpen) {
-      return
-    }
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose()
-      }
-    }
-
+    if (!isOpen) return
+    const handleEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handleEscape)
-    return () => {
-      window.removeEventListener('keydown', handleEscape)
-    }
+    return () => window.removeEventListener('keydown', handleEscape)
   }, [isOpen, onClose])
 
-  if (!isOpen) {
-    return null
-  }
+  if (!isOpen) return null
 
   const syncDraft = (overrides: Partial<ProfileDraft>) => {
-    if (typeof onDraftChange !== 'function') {
-      return
-    }
-
-    onDraftChange({
-      ...initialProfileDraft,
-      ...overrides,
-    })
+    if (typeof onDraftChange !== 'function') return
+    onDraftChange({ ...initialProfileDraft, ...overrides })
   }
+
+  const setMsg = (msg: string) => { setFeedback(msg); setError(null) }
+  const setErr = (msg: string) => { setError(msg); setFeedback(null) }
 
   const handleSaveUsername = async () => {
-    const trimmedUsername = username.trim().replace(/^@+/, '')
-
-    if (!trimmedUsername) {
-      setError('Username cannot be empty.')
-      return
-    }
-
-    setIsSavingUsername(true)
-    setError(null)
-    setFeedback(null)
-
+    const trimmed = username.trim().replace(/^@+/, '')
+    if (!trimmed) { setErr('Username cannot be empty.'); return }
+    setIsSavingUsername(true); setError(null); setFeedback(null)
     try {
-      await updateUsernameForUser(profileUser.id, trimmedUsername)
-      syncDraft({ username: trimmedUsername })
-      await onProfileUpdated(trimmedUsername)
-      setFeedback('Username updated.')
-    } catch (caughtError) {
-      const message =
-        caughtError instanceof Error
-          ? caughtError.message
-          : 'Unable to update username.'
-      setError(message)
-    } finally {
-      setIsSavingUsername(false)
-    }
+      await updateUsernameForUser(profileUser.id, trimmed)
+      syncDraft({ username: trimmed })
+      await onProfileUpdated(trimmed)
+      setMsg('Username updated.')
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Unable to update username.') }
+    finally { setIsSavingUsername(false) }
   }
 
-  const handleToggleEmailOptIn = async (nextValue: boolean) => {
-    setIsSavingNotifications(true)
-    setError(null)
-    setFeedback(null)
-
+  const handleToggleEmailOptIn = async (next: boolean) => {
+    setIsSavingNotifications(true); setError(null); setFeedback(null)
     try {
-      await updateEmailOptInForUser(profileUser.id, nextValue)
-      setEmailOptIn(nextValue)
-      await onProfileUpdated()
-      setFeedback('Email digest preference updated.')
-    } catch (caughtError) {
-      const message =
-        caughtError instanceof Error
-          ? caughtError.message
-          : 'Unable to update email digest preference.'
-      setError(message)
-    } finally {
-      setIsSavingNotifications(false)
-    }
+      await updateEmailOptInForUser(profileUser.id, next)
+      setEmailOptIn(next); await onProfileUpdated()
+      setMsg('Email digest preference updated.')
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Unable to update preference.') }
+    finally { setIsSavingNotifications(false) }
   }
 
-  const handleTogglePublicProfile = async (nextValue: boolean) => {
-    setIsSavingPrivacy(true)
-    setError(null)
-    setFeedback(null)
-
+  const handleTogglePublicProfile = async (next: boolean) => {
+    setIsSavingPrivacy(true); setError(null); setFeedback(null)
     try {
-      await updateProfilePublicForUser(profileUser.id, nextValue)
-      setIsPublicProfile(nextValue)
-      await onProfileUpdated()
-      setFeedback(
-        nextValue ? 'Public profile enabled.' : 'Public profile disabled.',
-      )
-    } catch (caughtError) {
-      const message =
-        caughtError instanceof Error
-          ? caughtError.message
-          : 'Unable to update profile privacy.'
-      setError(message)
-    } finally {
-      setIsSavingPrivacy(false)
-    }
+      await updateProfilePublicForUser(profileUser.id, next)
+      setIsPublicProfile(next); await onProfileUpdated()
+      setMsg(next ? 'Profile is now public.' : 'Profile is now private.')
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Unable to update privacy.') }
+    finally { setIsSavingPrivacy(false) }
   }
 
   const handleSaveDigestTime = async () => {
-    if (!digestTime) {
-      setError('Choose a digest time first.')
-      return
-    }
-
-    setIsSavingNotifications(true)
-    setError(null)
-    setFeedback(null)
-
+    if (!digestTime) { setErr('Choose a digest time first.'); return }
+    setIsSavingNotifications(true); setError(null); setFeedback(null)
     try {
       await updateDigestTimeForUser(profileUser.id, digestTime)
       await onProfileUpdated()
-      setFeedback('Digest time updated.')
-    } catch (caughtError) {
-      const message =
-        caughtError instanceof Error
-          ? caughtError.message
-          : 'Unable to update digest time.'
-      setError(message)
-    } finally {
-      setIsSavingNotifications(false)
-    }
+      setMsg('Digest time updated.')
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Unable to update digest time.') }
+    finally { setIsSavingNotifications(false) }
   }
 
   const reloadIntegrations = async () => {
     const items = await fetchActiveIntegrationsForUser(profileUser.id)
-    setIntegrations(items)
-    await onProfileUpdated()
+    setIntegrations(items); await onProfileUpdated()
   }
 
-  const handleConnectManualIntegration = async (
-    platform: 'leetcode' | 'codeforces',
-    handle: string,
-  ) => {
-    const trimmedHandle = handle.trim()
-    const currentIntegration =
-      platform === 'leetcode' ? leetcodeIntegration : codeforcesIntegration
-
-    if (!trimmedHandle) {
-      setError(`Enter your ${platform} handle first.`)
-      return
-    }
-
-    setBusyIntegration(platform)
-    setError(null)
-    setFeedback(null)
-
+  const handleConnectManualIntegration = async (platform: 'leetcode' | 'codeforces', handle: string) => {
+    const trimmed = handle.trim()
+    if (!trimmed) { setErr(`Enter your ${platform} handle first.`); return }
+    const current = platform === 'leetcode' ? leetcodeIntegration : codeforcesIntegration
+    setBusyIntegration(platform); setError(null); setFeedback(null)
     try {
-      if (
-        currentIntegration &&
-        currentIntegration.handle.toLowerCase() !== trimmedHandle.toLowerCase()
-      ) {
-        await disconnectIntegrationForUser(currentIntegration.id)
+      if (current && current.handle.toLowerCase() !== trimmed.toLowerCase()) {
+        await disconnectIntegrationForUser(current.id)
       }
-
-      await createIntegrationForUser(profileUser.id, platform, trimmedHandle)
-      if (platform === 'leetcode') {
-        syncDraft({ leetcodeId: trimmedHandle })
-      } else {
-        syncDraft({ codeforcesId: trimmedHandle })
-      }
+      await createIntegrationForUser(profileUser.id, platform, trimmed)
+      if (platform === 'leetcode') syncDraft({ leetcodeId: trimmed })
+      else syncDraft({ codeforcesId: trimmed })
       await reloadIntegrations()
-      setFeedback(`${platform} integration updated.`)
-    } catch (caughtError) {
-      const message =
-        caughtError instanceof Error
-          ? caughtError.message
-          : `Unable to connect ${platform}.`
-      setError(message)
-    } finally {
-      setBusyIntegration(null)
-    }
+      setMsg(`${platform} integration saved.`)
+    } catch (e) { setErr(e instanceof Error ? e.message : `Unable to connect ${platform}.`) }
+    finally { setBusyIntegration(null) }
   }
 
-  const handleDisconnectIntegration = async (
-    integration: BackendIntegration,
-  ) => {
-    setBusyIntegration(integration.platform)
-    setError(null)
-    setFeedback(null)
-
+  const handleDisconnectIntegration = async (integration: BackendIntegration) => {
+    setBusyIntegration(integration.platform); setError(null); setFeedback(null)
     try {
       await disconnectIntegrationForUser(integration.id)
-      if (integration.platform === 'leetcode') {
-        setLeetcodeHandle('')
-        syncDraft({ leetcodeId: '' })
-      }
-
-      if (integration.platform === 'codeforces') {
-        setCodeforcesHandle('')
-        syncDraft({ codeforcesId: '' })
-      }
-
+      if (integration.platform === 'leetcode') { setLeetcodeHandle(''); syncDraft({ leetcodeId: '' }) }
+      if (integration.platform === 'codeforces') { setCodeforcesHandle(''); syncDraft({ codeforcesId: '' }) }
       await reloadIntegrations()
-      setFeedback(`${integration.platform} integration disconnected.`)
-    } catch (caughtError) {
-      const message =
-        caughtError instanceof Error
-          ? caughtError.message
-          : 'Unable to disconnect integration.'
-      setError(message)
-    } finally {
-      setBusyIntegration(null)
-    }
+      setMsg(`${integration.platform} disconnected.`)
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Unable to disconnect.') }
+    finally { setBusyIntegration(null) }
   }
 
   return (
     <div
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/72 px-4 py-6 backdrop-blur-sm md:px-6 md:py-10"
+      className="fixed inset-0 z-50 flex items-start justify-center px-4 py-8 md:py-12"
       role="dialog"
+      style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(12px)' }}
       onClick={onClose}
     >
       <div
-        className="settings-scrollbar max-h-[calc(100vh-48px)] w-full max-w-5xl overflow-y-auto rounded-[28px] border border-white/10 bg-[#080808] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.45)] md:p-8"
-        onClick={(event) => {
-          event.stopPropagation()
+        className="dt-scrollbar w-full overflow-y-auto animate-fade-up"
+        style={{
+          maxWidth: 560,
+          maxHeight: 'calc(100vh - 64px)',
+          background: '#0a0a0a',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 16,
+          boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-6">
+        {/* Dialog header */}
+        <div
+          className="flex items-center justify-between px-6 py-5"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: '#0a0a0a', zIndex: 1 }}
+        >
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/40">
-              Settings
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-[-0.05em] text-white">
-              Manage your DevTrackr profile and sync preferences.
+            <p className="section-label" style={{ marginBottom: 4 }}>Settings</p>
+            <h2 style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.025em', color: '#fff' }}>
+              Profile & Preferences
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/45">
-              This dialog only exposes controls that match the current backend APIs.
-            </p>
           </div>
           <button
-            aria-label="Close settings"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/65 transition hover:bg-white/[0.06] hover:text-white"
+            aria-label="Close"
+            className="btn-ghost"
+            style={{ width: 32, height: 32, padding: 0 }}
             onClick={onClose}
             type="button"
           >
-            <X className="h-4 w-4" />
+            <X size={14} />
           </button>
         </div>
 
-        {error ? (
-          <div className="mt-6 rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-100">
-            {error}
-          </div>
-        ) : null}
-
-        {feedback ? (
-          <div className="mt-6 flex items-center gap-2 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
-            <Check className="h-4 w-4 shrink-0" />
-            {feedback}
-          </div>
-        ) : null}
-
-        <div className="mt-8 grid gap-6">
-          <section className="rounded-[24px] border border-white/10 bg-white/[0.015] p-5">
-            <div className="flex items-center gap-3">
-              <Shield className="h-4 w-4 text-white/55" />
-              <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">
-                Account
-              </h3>
+        <div className="px-6 py-6">
+          {/* Feedback / error banner */}
+          {error && (
+            <div
+              className="mb-5 flex items-center gap-2.5 rounded-lg px-3.5 py-3"
+              style={{ border: '1px solid rgba(248,113,113,0.2)', background: 'rgba(248,113,113,0.07)', fontSize: 12, color: 'rgba(255,180,180,0.9)' }}
+            >
+              <AlertCircle size={13} style={{ flexShrink: 0 }} />
+              {error}
             </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-white/70">
-                  Username
-                </span>
+          )}
+          {feedback && (
+            <div
+              className="mb-5 flex items-center gap-2.5 rounded-lg px-3.5 py-3"
+              style={{ border: '1px solid rgba(52,211,153,0.2)', background: 'rgba(52,211,153,0.07)', fontSize: 12, color: 'rgba(100,230,180,0.9)' }}
+            >
+              <Check size={13} style={{ flexShrink: 0 }} />
+              {feedback}
+            </div>
+          )}
+
+          {/* Account */}
+          <Section title="Account">
+            <div style={{ marginBottom: 12 }}>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>Username</p>
+              <div className="flex items-center gap-2">
                 <input
-                  className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-white/20"
-                  onChange={(event) => {
-                    setUsername(event.target.value)
-                  }}
+                  className="dt-input"
+                  onChange={(e) => setUsername(e.target.value)}
                   placeholder="@username"
                   type="text"
                   value={username}
+                  style={{ flex: 1 }}
                 />
-              </label>
-              <button
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isSavingUsername}
-                onClick={handleSaveUsername}
-                type="button"
-              >
-                {isSavingUsername ? 'Saving...' : 'Save username'}
-              </button>
-            </div>
-            <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 px-4 py-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-white/35">Email</p>
-              <p className="mt-2 text-sm text-white/75">{profileUser.email}</p>
-            </div>
-          </section>
-
-          <section className="rounded-[24px] border border-white/10 bg-white/[0.015] p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">
-              Privacy
-            </h3>
-            <div className="mt-4 grid gap-4">
-              <ToggleRow
-                checked={isPublicProfile}
-                description="Control whether other people can open your public /@username profile page."
-                disabled={isSavingPrivacy}
-                label="Public profile"
-                onChange={handleTogglePublicProfile}
-              />
-              <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-white/35">
-                  Public URL preview
-                </p>
-                <p className="mt-2 text-sm text-white/75">
-                  /@{profileUser.publicSlug || profileUser.username || username.trim()}
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-[24px] border border-white/10 bg-white/[0.015] p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">
-              Notifications & Digest
-            </h3>
-            <div className="mt-4 grid gap-4">
-              <ToggleRow
-                checked={emailOptIn}
-                description="Enable the daily digest email from your aggregated activity."
-                disabled={isSavingNotifications}
-                label="Email digest enabled"
-                onChange={handleToggleEmailOptIn}
-              />
-              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-white/70">
-                    Digest time
-                  </span>
-                  <input
-                    className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-white/20"
-                    onChange={(event) => {
-                      setDigestTime(event.target.value)
-                    }}
-                    type="time"
-                    value={digestTime}
-                  />
-                </label>
                 <button
-                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] px-5 text-sm font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={isSavingNotifications}
-                  onClick={handleSaveDigestTime}
+                  className="btn-primary"
+                  style={{ height: 36, flexShrink: 0, fontSize: 12 }}
+                  disabled={isSavingUsername}
+                  onClick={() => void handleSaveUsername()}
                   type="button"
                 >
-                  Save time
+                  {isSavingUsername ? 'Saving…' : 'Save'}
                 </button>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-white/35">Timezone</p>
-                <p className="mt-2 text-sm text-white/75">
+            </div>
+
+            <div
+              style={{
+                padding: '10px 12px',
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: 8,
+              }}
+            >
+              <p className="section-label" style={{ marginBottom: 4 }}>Email</p>
+              <p className="mono" style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>{profileUser.email}</p>
+            </div>
+          </Section>
+
+          {/* Privacy */}
+          <Section title="Privacy">
+            <SettingRow
+              label="Public profile"
+              description="Allow anyone to view your contribution heatmap and activity at /@username."
+            >
+              <Toggle checked={isPublicProfile} onChange={(v) => void handleTogglePublicProfile(v)} disabled={isSavingPrivacy} />
+            </SettingRow>
+
+            <div
+              style={{
+                padding: '10px 12px',
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: 8,
+                marginTop: 10,
+              }}
+            >
+              <p className="section-label" style={{ marginBottom: 4 }}>Public URL</p>
+              <p className="mono" style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                /@{profileUser.publicSlug || profileUser.username || username.trim()}
+              </p>
+            </div>
+          </Section>
+
+          {/* Digest */}
+          <Section title="Digest & Notifications">
+            <SettingRow
+              label="Daily email digest"
+              description="Receive a nightly summary of your aggregated activity."
+            >
+              <Toggle checked={emailOptIn} onChange={(v) => void handleToggleEmailOptIn(v)} disabled={isSavingNotifications} />
+            </SettingRow>
+
+            <div style={{ marginTop: 12 }}>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>
+                Digest time
+                <span className="mono" style={{ marginLeft: 6, fontSize: 11, color: 'rgba(255,255,255,0.24)' }}>
                   {timezoneLabel}
-                </p>
-                <p className="mt-1 text-xs text-white/40">
-                  Timezone editing is not available yet.
-                </p>
+                </span>
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  className="dt-input"
+                  style={{ flex: 1 }}
+                  onChange={(e) => setDigestTime(e.target.value)}
+                  type="time"
+                  value={digestTime}
+                />
+                <button
+                  className="btn-ghost"
+                  style={{ height: 36, flexShrink: 0, fontSize: 12 }}
+                  disabled={isSavingNotifications}
+                  onClick={() => void handleSaveDigestTime()}
+                  type="button"
+                >
+                  Save
+                </button>
               </div>
             </div>
-          </section>
+          </Section>
 
-          <section className="rounded-[24px] border border-white/10 bg-white/[0.015] p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">
-              Integrations
-            </h3>
-            <div className="mt-4 grid gap-4">
-              <IntegrationCard
-                actionLabel={githubIntegration ? 'Reconnect GitHub' : 'Connect GitHub'}
-                description="GitHub uses the existing OAuth flow for secure account linking."
-                handleValue={
-                  githubIntegration?.handle ||
-                  profileUser.githubHandle ||
-                  authSession.githubHandle ||
-                  ''
-                }
-                inputPlaceholder=""
-                isBusy={busyIntegration === 'github'}
-                isConnected={Boolean(githubIntegration || profileUser.githubHandle)}
-                onAction={() => {
-                  onNavigateToAuthenticate()
-                }}
-                onDisconnect={
-                  githubIntegration
-                    ? () => {
-                        void handleDisconnectIntegration(githubIntegration)
-                      }
-                    : undefined
-                }
-                title="GitHub"
-              />
-              <IntegrationCard
-                actionLabel={leetcodeIntegration ? 'Update LeetCode' : 'Connect LeetCode'}
-                description="Add the handle you want DevTrackr to track for accepted problems."
-                handleValue={leetcodeHandle}
-                inputPlaceholder="tourist"
-                isBusy={busyIntegration === 'leetcode'}
-                isConnected={Boolean(leetcodeIntegration)}
-                onAction={() => {
-                  void handleConnectManualIntegration('leetcode', leetcodeHandle)
-                }}
-                onDisconnect={
-                  leetcodeIntegration
-                    ? () => {
-                        void handleDisconnectIntegration(leetcodeIntegration)
-                      }
-                    : undefined
-                }
-                onHandleChange={setLeetcodeHandle}
-                title="LeetCode"
-              />
-              <IntegrationCard
-                actionLabel={
-                  codeforcesIntegration ? 'Update Codeforces' : 'Connect Codeforces'
-                }
-                description="Add the handle you want DevTrackr to track for contest-style solves."
-                handleValue={codeforcesHandle}
-                inputPlaceholder="tourist"
-                isBusy={busyIntegration === 'codeforces'}
-                isConnected={Boolean(codeforcesIntegration)}
-                onAction={() => {
-                  void handleConnectManualIntegration('codeforces', codeforcesHandle)
-                }}
-                onDisconnect={
-                  codeforcesIntegration
-                    ? () => {
-                        void handleDisconnectIntegration(codeforcesIntegration)
-                      }
-                    : undefined
-                }
-                onHandleChange={setCodeforcesHandle}
-                title="Codeforces"
-              />
-            </div>
-          </section>
-
-          {/* <section className="rounded-[24px] border border-white/10 bg-white/[0.015] p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">
-              Send Digest
-            </h3>
-            <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-white">Send your digest immediately</p>
-                <p className="mt-1 text-sm leading-6 text-white/45">
-                  Send the current digest email right away using your saved preferences.
-                </p>
-              </div>
-              <button
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isSendingDigest}
-                onClick={handleSendDigestNow}
-                type="button"
-              >
-                {isSendingDigest ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <ExternalLink className="h-4 w-4" />
-                )}
-                {isSendingDigest ? 'Sending...' : 'Send digest now'}
-              </button>
-            </div>
-          </section> */}
+          {/* Integrations */}
+          <Section title="Integrations">
+            <IntegrationRow
+              title="GitHub"
+              description="Uses OAuth. Reconnect to refresh the token or update the linked account."
+              isConnected={Boolean(githubIntegration || profileUser.githubHandle)}
+              connectedHandle={githubIntegration?.handle || profileUser.githubHandle || authSession.githubHandle}
+              handleValue={githubIntegration?.handle || profileUser.githubHandle || authSession.githubHandle || ''}
+              onConnect={() => onNavigateToAuthenticate()}
+              onDisconnect={githubIntegration ? () => void handleDisconnectIntegration(githubIntegration) : undefined}
+              isBusy={busyIntegration === 'github'}
+              inputPlaceholder=""
+            />
+            <IntegrationRow
+              title="LeetCode"
+              description="Track accepted submissions by handle. No API key required."
+              isConnected={Boolean(leetcodeIntegration)}
+              connectedHandle={leetcodeIntegration?.handle}
+              handleValue={leetcodeHandle}
+              onHandleChange={setLeetcodeHandle}
+              onConnect={() => void handleConnectManualIntegration('leetcode', leetcodeHandle)}
+              onDisconnect={leetcodeIntegration ? () => void handleDisconnectIntegration(leetcodeIntegration) : undefined}
+              isBusy={busyIntegration === 'leetcode'}
+              inputPlaceholder="tourist"
+            />
+            <IntegrationRow
+              title="Codeforces"
+              description="Track contest problem solves by handle. Verdict and rating are included."
+              isConnected={Boolean(codeforcesIntegration)}
+              connectedHandle={codeforcesIntegration?.handle}
+              handleValue={codeforcesHandle}
+              onHandleChange={setCodeforcesHandle}
+              onConnect={() => void handleConnectManualIntegration('codeforces', codeforcesHandle)}
+              onDisconnect={codeforcesIntegration ? () => void handleDisconnectIntegration(codeforcesIntegration) : undefined}
+              isBusy={busyIntegration === 'codeforces'}
+              inputPlaceholder="tourist"
+            />
+          </Section>
         </div>
       </div>
     </div>

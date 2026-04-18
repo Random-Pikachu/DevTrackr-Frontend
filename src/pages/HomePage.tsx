@@ -7,25 +7,25 @@ import { SiteHeader } from '../components/landing/SiteHeader'
 
 const signalCards = [
   {
-    tags: ['Daily tracking', 'API sync'],
+    kicker: 'Collect',
     title: 'Multi-platform aggregation',
     description:
-      'Automatically fetch GitHub push events, LeetCode accepted submissions by difficulty, and Codeforces problem verdicts into one daily view.',
-    kicker: 'Collect',
+      'Scheduled workers pull GitHub push events, LeetCode accepted submissions, and Codeforces verdicts into a single normalized timeline—automatically.',
+    tags: ['GitHub', 'LeetCode', 'Codeforces'],
   },
   {
-    tags: ['Unified streaks', 'Consistency'],
-    title: 'Unified streaks',
-    description:
-      'Keep one comprehensive streak alive through activity on any connected platform instead of tracking each source by hand.',
     kicker: 'Normalize',
+    title: 'One unified streak',
+    description:
+      'Activity on any connected platform extends the same streak. No more checking three dashboards to know if your chain is alive.',
+    tags: ['Streak tracking', 'Daily habit'],
   },
   {
-    tags: ['Daily digest', 'Email'],
+    kicker: 'Dispatch',
     title: 'Nightly email digest',
     description:
-      'Receive a clean summary of your daily metrics in your inbox every night, without needing to open three separate platforms.',
-    kicker: 'Dispatch',
+      'A clean summary lands in your inbox each night—commit count, problems solved, streak length. Digest time is configurable per timezone.',
+    tags: ['Email digest', 'Scheduled'],
   },
 ]
 
@@ -33,20 +33,20 @@ const integrationCards = [
   {
     name: 'GitHub',
     description:
-      'Track push activity from your repositories so real project work counts toward the same daily habit you are building elsewhere.',
-    tags: ['Daily tracking', 'Unified streaks'],
+      'Connects via OAuth. Push events from all your repositories are fetched daily and mapped to the contribution heatmap.',
+    tags: ['OAuth', 'Push events', 'Repos'],
   },
   {
     name: 'LeetCode',
     description:
-      'Capture accepted problems with difficulty breakdowns so practice quality is visible, not just total volume.',
-    tags: ['Daily tracking', 'Unified streaks'],
+      'Handle-based tracking of accepted submissions. Easy, Medium, and Hard counts are broken out and included in the digest.',
+    tags: ['Handle', 'Accepted only', 'Difficulty'],
   },
   {
     name: 'Codeforces',
     description:
-      'Pull contest-style solves into the same timeline so competitive programming contributes to your overall consistency.',
-    tags: ['Daily tracking', 'Unified streaks'],
+      'Contest-style solves pulled by handle. Problem rating and tags are preserved and displayed on your day-detail view.',
+    tags: ['Handle', 'Verdicts', 'Rating'],
   },
 ]
 
@@ -56,7 +56,7 @@ type HomePageProps = {
 
 export default function HomePage({ onGetStarted }: HomePageProps) {
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div style={{ minHeight: '100vh', background: '#000' }}>
       <SiteHeader onGetStarted={onGetStarted} />
       <main>
         <HeroSection onGetStarted={onGetStarted} />

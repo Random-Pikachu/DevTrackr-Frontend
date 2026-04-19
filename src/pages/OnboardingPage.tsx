@@ -129,10 +129,10 @@ export function OnboardingPage({
 
   return (
     <main
-      className="flex min-h-screen items-start justify-center px-6 py-16"
+      className="flex min-h-screen items-center justify-center px-6"
       style={{ background: '#000' }}
     >
-      <div className="animate-fade-up w-full" style={{ maxWidth: 760, paddingTop: 48 }}>
+      <div className="animate-fade-up w-full" style={{ maxWidth: 760 }}>
 
         {/* Step progress row */}
         <div className="mb-10 flex items-center gap-0">
@@ -142,7 +142,17 @@ export function OnboardingPage({
 
             return (
               <div key={s.id} className="flex items-center">
-                <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="flex items-center gap-2"
+                  style={{
+                    background: 'none', border: 'none', padding: 0,
+                    cursor: isComplete ? 'pointer' : 'default',
+                  }}
+                  onClick={() => {
+                    if (isComplete) advance(s.id)
+                  }}
+                >
                   <div
                     style={{
                       width: 22,
@@ -151,8 +161,8 @@ export function OnboardingPage({
                       border: isActive
                         ? '1px solid rgba(255,255,255,0.5)'
                         : isComplete
-                        ? 'none'
-                        : '1px solid rgba(255,255,255,0.12)',
+                          ? 'none'
+                          : '1px solid rgba(255,255,255,0.12)',
                       background: isComplete ? '#fff' : isActive ? 'rgba(255,255,255,0.06)' : 'transparent',
                       display: 'flex',
                       alignItems: 'center',
@@ -172,17 +182,20 @@ export function OnboardingPage({
                   </div>
                   <span
                     style={{
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: isActive ? 600 : 400,
                       color: isActive ? 'rgba(255,255,255,0.8)' : isComplete ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.24)',
+                      transition: 'color 0.15s',
                     }}
+                    onMouseEnter={(e) => { if (isComplete && !isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.6)' }}
+                    onMouseLeave={(e) => { if (isComplete && !isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.4)' }}
                   >
                     {s.label}
                     {s.optional && (
                       <span style={{ color: 'rgba(255,255,255,0.2)', fontWeight: 400 }}> (optional)</span>
                     )}
                   </span>
-                </div>
+                </button>
                 {i < steps.length - 1 && (
                   <div style={{ width: 32, height: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px' }} />
                 )}
@@ -192,19 +205,19 @@ export function OnboardingPage({
         </div>
 
         {/* Step card */}
-        <div className="card" style={{ padding: '36px 36px 40px', borderRadius: 14 }} key={`${step}-${stepKey}`}>
-          <div style={{ marginBottom: 28 }}>
-            <span className="section-label" style={{ marginBottom: 8, display: 'block' }}>
+        <div className="card" style={{ padding: '44px 44px 48px', borderRadius: 16 }} key={`${step}-${stepKey}`}>
+          <div style={{ marginBottom: 36 }}>
+            <span className="section-label" style={{ marginBottom: 12, display: 'block', fontSize: 12 }}>
               {steps[activeIndex]?.label}
               {steps[activeIndex]?.optional && ' — optional'}
             </span>
-            <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.03em', color: '#fff', lineHeight: 1.2 }}>
+            <h2 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: '#fff', lineHeight: 1.25 }}>
               {step === 'username' && 'Choose your public profile handle.'}
               {step === 'leetcode' && 'Link your LeetCode account.'}
               {step === 'codeforces' && 'Link your Codeforces account.'}
               {step === 'review' && 'Looks good? Publish your profile.'}
             </h2>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.42)', marginTop: 8, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.48)', marginTop: 12, lineHeight: 1.6 }}>
               {step === 'username' && 'This becomes your route: devtrackr.app/@yourname. Only alphanumeric and dashes.'}
               {step === 'leetcode' && 'We will track accepted submissions and include them in your streak and heatmap.'}
               {step === 'codeforces' && 'Contest-style problem solves will appear in your daily digest and contribution map.'}
@@ -216,13 +229,13 @@ export function OnboardingPage({
           {step === 'username' && (
             <div>
               <div className="flex items-center overflow-hidden rounded-lg" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
-                <span style={{ padding: '10px 12px', fontSize: 13, color: 'rgba(255,255,255,0.24)', background: 'rgba(255,255,255,0.03)', borderRight: '1px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap' }}>
+                <span style={{ padding: '12px 14px', fontSize: 16, color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.03)', borderRight: '1px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap' }}>
                   @
                 </span>
                 <input
                   autoFocus
                   className="dt-input"
-                  style={{ border: 'none', borderRadius: 0 }}
+                  style={{ border: 'none', borderRadius: 0, fontSize: 16, height: 50, paddingLeft: 12 }}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="yourhandle"
                   type="text"
@@ -246,6 +259,7 @@ export function OnboardingPage({
             <input
               autoFocus
               className="dt-input"
+              style={{ fontSize: 16, height: 50 }}
               onChange={(e) => step === 'leetcode' ? setLeetcodeId(e.target.value) : setCodeforcesId(e.target.value)}
               placeholder="tourist"
               type="text"
@@ -265,14 +279,14 @@ export function OnboardingPage({
                   key={row.label}
                   className="flex items-center justify-between"
                   style={{
-                    padding: '10px 14px',
+                    padding: '12px 16px',
                     background: 'rgba(255,255,255,0.025)',
                     border: '1px solid rgba(255,255,255,0.07)',
                     borderRadius: 8,
                   }}
                 >
-                  <span className="section-label">{row.label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-mono)' }}>
+                  <span className="section-label" style={{ fontSize: 12 }}>{row.label}</span>
+                  <span style={{ fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-mono)' }}>
                     {row.value}
                   </span>
                 </div>
@@ -291,25 +305,25 @@ export function OnboardingPage({
           )}
 
           {/* Actions */}
-          <div className="mt-8 flex items-center gap-3">
+          <div className="mt-10 flex items-center gap-4">
             {step !== 'review' ? (
               <>
                 <button
                   className="btn-primary"
-                  style={{ height: 38 }}
+                  style={{ height: 44, padding: '0 24px', fontSize: 14 }}
                   onClick={
                     step === 'username' ? handleContinueUsername
-                    : step === 'leetcode' ? handleLeetcodeEnter
-                    : handleCodeforcesEnter
+                      : step === 'leetcode' ? handleLeetcodeEnter
+                        : handleCodeforcesEnter
                   }
                   type="button"
                 >
-                  Continue <ArrowRight size={13} />
+                  Continue <ArrowRight size={15} />
                 </button>
                 {(step === 'leetcode' || step === 'codeforces') && (
                   <button
                     className="btn-ghost"
-                    style={{ height: 38 }}
+                    style={{ height: 44, padding: '0 24px', fontSize: 14 }}
                     onClick={step === 'leetcode'
                       ? () => { setWarning(null); setLeetcodeId(''); commitDraft({ leetcodeId: '' }); advance('codeforces') }
                       : () => { setWarning(null); setCodeforcesId(''); commitDraft({ codeforcesId: '' }); advance('review') }}
@@ -322,7 +336,7 @@ export function OnboardingPage({
             ) : (
               <button
                 className="btn-primary"
-                style={{ height: 38, opacity: isSubmitting ? 0.6 : 1 }}
+                style={{ height: 44, padding: '0 24px', fontSize: 14, opacity: isSubmitting ? 0.6 : 1 }}
                 disabled={isSubmitting}
                 onClick={() => void handleCreateProfile()}
                 type="button"

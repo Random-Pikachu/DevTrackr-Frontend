@@ -62,7 +62,7 @@ export default function HomePage({ onGetStarted }: HomePageProps) {
         <HeroSection onGetStarted={onGetStarted} />
         <SignalSection cards={signalCards} />
         <IntegrationsSection integrations={integrationCards} />
-        <ClosingSection />
+        <ClosingSection onGetStarted={onGetStarted} />
       </main>
       <SiteFooter />
     </div>

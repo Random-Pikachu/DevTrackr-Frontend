@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { ProfilePreview } from './ProfilePreview'
 
 type HeroSectionProps = {
@@ -5,12 +6,29 @@ type HeroSectionProps = {
 }
 
 export function HeroSection({ onGetStarted }: HeroSectionProps) {
+  const [scale, setScale] = useState(1.4)
+
+  useEffect(() => {
+    const handleResize = () => {
+      // Scale proportionally on screens wider than 1000px, otherwise keep it at 1 for mobile safety
+      // Tweak base divisor to control how fast it grows. 850 creates a nice ~1.7 scale on 1440p
+      const newScale = Math.max(1.1, window.innerWidth / 850)
+      setScale(newScale)
+    }
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   return (
     <section
       id="top"
       style={{
         position: 'relative',
-        paddingTop: 120,
+        display: 'flex',
+        alignItems: 'center',
+        paddingTop: 80, // buffer for header
+        paddingBottom: 40,
         minHeight: '100vh',
         overflow: 'hidden',
       }}
@@ -32,14 +50,14 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
       />
 
       {/* Content */}
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 1080, margin: '0 auto', padding: '0 40px' }}>
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 1080, margin: '0 auto', padding: '0 40px' }}>
 
         {/* Headline */}
         <h1
           className="animate-fade-up"
           style={{
             fontSize: 'clamp(40px, 6vw, 68px)', fontWeight: 700, letterSpacing: '-0.04em',
-            lineHeight: 1.1, color: '#fff', maxWidth: 1000, margin: '0 auto 30px', textAlign: 'center',
+            lineHeight: 1.1, color: '#fff', maxWidth: 1000, margin: '0 auto 16px', textAlign: 'center',
           }}
         >
           The coding habit tracker for<br />
@@ -47,7 +65,7 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
         </h1>
 
         {/* CTAs */}
-        <div className="animate-fade-up" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 44, animationDelay: '100ms' }}>
+        <div className="animate-fade-up" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 84, animationDelay: '100ms' }}>
           <button
             onClick={onGetStarted} type="button"
             style={{
@@ -71,12 +89,12 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
             onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.6)' }}
             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.8)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)' }}
           >
-            how it works
+            How it works
           </a>
         </div>
 
         {/* Profile preview — fades out at bottom */}
-        <div className="animate-fade-up" style={{ position: 'relative', width: '100%', maxWidth: 1000, margin: '0 auto', transform: 'scale(1.4)', transformOrigin: 'top center', marginTop: -32, animationDelay: '180ms' }}>
+        <div className="animate-fade-up" style={{ position: 'relative', width: '100%', maxWidth: 1000, margin: '0 auto', transform: `scale(${scale})`, transformOrigin: 'top center', marginTop: 0, animationDelay: '180ms' }}>
           <div style={{ position: 'relative', zIndex: 1, boxShadow: '0 0 0 1px rgba(255,255,255,0.05), 0 20px 60px rgba(0,0,0,0.8)', borderRadius: 14 }}>
             <ProfilePreview />
           </div>

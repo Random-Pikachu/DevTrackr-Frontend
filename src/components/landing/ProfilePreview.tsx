@@ -22,41 +22,67 @@ function heatColor(n: number) {
 function TinyEntry({ entry }: { entry: ActivityEntry }) {
   if (entry.platform === 'github') {
     return (
-      <div style={{ padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-        <p style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.8)', letterSpacing: '-0.01em' }}>
-          {entry.repo.split('/')[1]}
-        </p>
-        <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace', marginTop: 1 }}>
-          {entry.commits} commit{entry.commits !== 1 ? 's' : ''}
-          {entry.messages[0] ? ` · ${entry.messages[0]}` : ''}
-        </p>
+      <div style={{ padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
+            {entry.repo}
+          </p>
+          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)', marginTop: 4 }}>
+            {entry.commits} commit{entry.commits !== 1 ? 's' : ''}
+          </p>
+        </div>
+        {entry.messages[0] && (
+          <div style={{ marginTop: 10, borderLeft: '2px solid rgba(255,255,255,0.08)', paddingLeft: 12 }}>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', fontStyle: 'italic', lineHeight: 1.5 }}>
+              {entry.messages[0].trim()}
+            </p>
+          </div>
+        )}
       </div>
     )
   }
   if (entry.platform === 'leetcode') {
-    const dc: Record<string, string> = { Easy: '#34d399', Medium: '#fbbf24', Hard: '#f87171' }
+    const dc: Record<string, string> = { Easy: 'rgba(52,211,153,0.9)', Medium: 'rgba(251,191,36,0.9)', Hard: 'rgba(248,113,113,0.9)' }
     return (
-      <div style={{ padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <p style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.8)', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {entry.title}
-        </p>
-        <span style={{ fontSize: 9, fontFamily: 'monospace', color: dc[entry.difficulty], flexShrink: 0 }}>{entry.difficulty}</span>
+      <div style={{ padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
+              {entry.title}
+            </p>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)', marginTop: 4 }}>
+              Accepted · {entry.difficulty}
+            </p>
+          </div>
+          <span style={{ fontSize: 10, fontWeight: 600, fontFamily: 'var(--font-mono)', color: dc[entry.difficulty] }}>
+            {entry.difficulty}
+          </span>
+        </div>
       </div>
     )
   }
   // codeforces
+  const isAc = entry.verdict === 'OK'
   return (
-    <div style={{ padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-      <p style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.8)', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {entry.problem}
-      </p>
-      <span style={{
-        fontSize: 9, fontFamily: 'monospace',
-        color: entry.verdict === 'OK' ? '#34d399' : '#f87171',
-        flexShrink: 0,
-      }}>
-        {entry.verdict === 'OK' ? 'AC' : 'WA'}
-      </span>
+    <div style={{ padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
+            {entry.problem}
+          </p>
+          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)', marginTop: 4 }}>
+            {entry.verdict}
+          </p>
+        </div>
+        <span style={{
+          fontSize: 10, fontWeight: 600, fontFamily: 'var(--font-mono)',
+          padding: '2px 7px', borderRadius: 4,
+          border: '1px solid', borderColor: isAc ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.1)',
+          color: isAc ? 'rgba(52,211,153,0.9)' : 'rgba(255,255,255,0.4)',
+        }}>
+          {entry.verdict}
+        </span>
+      </div>
     </div>
   )
 }
@@ -65,7 +91,7 @@ function TinyEntry({ entry }: { entry: ActivityEntry }) {
 export function ProfilePreview() {
   const rows = useMemo(() => getPreviewHeatmapRows(), [])
   const [hoveredDate, setHoveredDate] = useState<string | null>(null)
-  const [selectedDate, setSelectedDate] = useState<string>('2025-04-14')
+  const [selectedDate, setSelectedDate] = useState<string>('2025-04-22')
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null)
 
   const activities = useMemo(() => getActivitiesForDate(selectedDate), [selectedDate])

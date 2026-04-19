@@ -18,6 +18,7 @@ export type AuthSession = {
   publicSlug?: string
   accessToken?: string
   connectedAt?: string
+  passwordSet?: boolean
   error?: string
 }
 
@@ -47,6 +48,7 @@ export type AuthPopupPayload = {
   userId?: string
   isNewUser?: boolean
   is_new_user?: string
+  password_set?: string
   error?: string
 }
 
@@ -81,6 +83,7 @@ export type BackendUser = {
   timezone?: string
   digestTime?: string
   emailOptIn?: boolean
+  passwordSet?: boolean
 }
 
 export type BackendHeatmapDay = {

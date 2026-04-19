@@ -474,3 +474,83 @@ export async function createIntegrationForUser(
 export async function disconnectIntegrationForUser(integrationId: string) {
   await deactivateIntegration(integrationId)
 }
+
+export async function registerWithEmail(email: string, password: string): Promise<{ token: string, user: BackendUser, is_new_user: boolean, password_set: boolean }> {
+  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  })
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}))
+    throw new Error(body.error || body.message || 'Registration failed')
+  }
+  const result = await response.json()
+  return { ...result, user: normalizeUser(result.user) }
+}
+
+export async function loginWithEmail(identifier: string, password: string): Promise<{ token: string, user: BackendUser, is_new_user: boolean, password_set: boolean }> {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier, password })
+  })
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}))
+    throw new Error(body.error || body.message || 'Login failed')
+  }
+  const result = await response.json()
+  return { ...result, user: normalizeUser(result.user) }
+}
+
+export async function requestPasswordSetupCode(email: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/password/setup/request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  })
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}))
+    throw new Error(body.error || body.message || 'Failed to request setup code')
+  }
+}
+
+export async function confirmPasswordSetup(email: string, code: string, new_password: string): Promise<{ token: string, user: BackendUser, is_new_user: boolean, password_set: boolean }> {
+  const response = await fetch(`${API_BASE_URL}/auth/password/setup/confirm`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code, new_password })
+  })
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}))
+    throw new Error(body.error || body.message || 'Failed to finish password setup')
+  }
+  const result = await response.json()
+  return { ...result, user: normalizeUser(result.user) }
+}
+
+export async function requestForgotPasswordCode(email: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/password/forgot/request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  })
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}))
+    throw new Error(body.error || body.message || 'Failed to request forgot password code')
+  }
+}
+
+export async function confirmForgotPassword(email: string, code: string, new_password: string): Promise<{ token: string, user: BackendUser, is_new_user: boolean, password_set: boolean }> {
+  const response = await fetch(`${API_BASE_URL}/auth/password/forgot/confirm`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code, new_password })
+  })
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}))
+    throw new Error(body.error || body.message || 'Failed to confirm forgot password')
+  }
+  const result = await response.json()
+  return { ...result, user: normalizeUser(result.user) }
+}

@@ -179,6 +179,19 @@ async function runAggregateForUser(userId: string) {
   throw new Error(errorText || 'Unable to refresh aggregated metrics.')
 }
 
+async function runAggregateRangeForUser(userId: string, start: string, end: string) {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}/aggregate/range?start=${start}&end=${end}`, {
+    method: 'POST',
+  })
+
+  if (response.ok) {
+    return
+  }
+
+  const errorText = await response.text()
+  throw new Error(errorText || 'Unable to perform aggregate range backfill.')
+}
+
 async function sendDigestForUser(userId: string) {
   const response = await fetch(`${API_BASE_URL}/users/${userId}/send-digest`, {
     method: 'POST',
@@ -361,6 +374,16 @@ export async function syncProfileToBackend({
     }
 
     await Promise.all(integrationJobs)
+
+    try {
+      const now = new Date()
+      const pad = (n: number) => String(n).padStart(2, '0')
+      const startStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`
+      const endStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+      await runAggregateRangeForUser(userId, startStr, endStr)
+    } catch (e) {
+      console.warn('Initial onboarding backfill failed:', e)
+    }
 
     let syncedUser: BackendUser | null = null
 

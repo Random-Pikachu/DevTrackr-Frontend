@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
+import toast from 'react-hot-toast'
 import type { AuthSession, BackendSyncResult, ProfileDraft } from '../types/app'
 
 type OnboardingPageProps = {
@@ -89,9 +90,34 @@ export function OnboardingPage({
     if (!usernameValue) { setWarning('Username is required.'); advance('username'); return }
     setIsSubmitting(true)
     setWarning(null)
+
+    const monthName = new Date().toLocaleString('en-US', { month: 'long' })
+    const messages = [
+      `Aggregating ${monthName}'s data…`,
+      'This can take 2 minutes…',
+      'Still crunching the numbers…'
+    ]
+    let cycleCount = 0
+
+    const toastId = toast.loading(messages[cycleCount])
+
+    const intervalId = setInterval(() => {
+      cycleCount = (cycleCount + 1) % messages.length
+      toast.loading(messages[cycleCount], { id: toastId })
+    }, 15000)
+
     const result = await onCreateProfile(buildDraft(initialProfileDraft, usernameValue, leetcodeValue, codeforcesValue))
+
+    clearInterval(intervalId)
+
+    if (result.ok) {
+      toast.success('Profile created!', { id: toastId })
+    } else {
+      toast.dismiss(toastId)
+      if (result.warning) setWarning(result.warning)
+    }
+
     setIsSubmitting(false)
-    if (!result.ok && result.warning) setWarning(result.warning)
   }
 
   useEffect(() => {

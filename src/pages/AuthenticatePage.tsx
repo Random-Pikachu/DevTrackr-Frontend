@@ -16,6 +16,10 @@ function buildBackendAuthUrl() {
   return `${apiBaseUrl}/auth/github/login`
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
 export function AuthenticatePage({
   authSession,
   onAuthSessionUpdate,
@@ -158,9 +162,10 @@ export function AuthenticatePage({
       } else {
         onContinueRef.current('/onboarding')
       }
-    } catch (err: any) {
-      setNotice(err.message || 'Registration failed.')
-      onAuthSessionUpdateRef.current({ status: 'idle', oauthState: undefined, isNewUser: undefined, error: err.message })
+    } catch (error) {
+      const message = getErrorMessage(error, 'Registration failed.')
+      setNotice(message)
+      onAuthSessionUpdateRef.current({ status: 'idle', oauthState: undefined, isNewUser: undefined, error: message })
     }
   }
 
@@ -192,9 +197,10 @@ export function AuthenticatePage({
       } else {
         onContinueRef.current('/onboarding')
       }
-    } catch (err: any) {
-      setNotice(err.message || 'Login failed.')
-      onAuthSessionUpdateRef.current({ status: 'idle', oauthState: undefined, isNewUser: undefined, error: err.message })
+    } catch (error) {
+      const message = getErrorMessage(error, 'Login failed.')
+      setNotice(message)
+      onAuthSessionUpdateRef.current({ status: 'idle', oauthState: undefined, isNewUser: undefined, error: message })
     }
   }
 
@@ -212,8 +218,8 @@ export function AuthenticatePage({
       await requestForgotPasswordCode(forgotEmail)
       setForgotStep('code')
       setNotice('Verification code sent to your email.')
-    } catch (err: any) {
-      setNotice(err.message || 'Failed to send reset code.')
+    } catch (error) {
+      setNotice(getErrorMessage(error, 'Failed to send reset code.'))
     } finally {
       onAuthSessionUpdateRef.current({ status: 'idle', oauthState: undefined, isNewUser: undefined, error: undefined })
     }
@@ -245,9 +251,10 @@ export function AuthenticatePage({
       } else {
         onContinueRef.current('/onboarding')
       }
-    } catch (err: any) {
-      setNotice(err.message || 'Failed to reset password.')
-      onAuthSessionUpdateRef.current({ status: 'idle', oauthState: undefined, isNewUser: undefined, error: err.message })
+    } catch (error) {
+      const message = getErrorMessage(error, 'Failed to reset password.')
+      setNotice(message)
+      onAuthSessionUpdateRef.current({ status: 'idle', oauthState: undefined, isNewUser: undefined, error: message })
     }
   }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import type { BackendActivity } from '../../types/app'
 
@@ -52,7 +52,7 @@ function CodeforcesEntry({ activity }: { activity: BackendActivity }) {
   const meta = activity.metadata || {}
   const tags: string[] = meta.tags || []
 
-  return (                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+  return (
     <div style={{ padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -60,8 +60,8 @@ function CodeforcesEntry({ activity }: { activity: BackendActivity }) {
             {meta.problem_name || 'Problem submission'}
           </p>
           <p className="mono mt-1" style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
-            {meta.verdict || activity.activity_type}
-            {meta.rating ? ` · Rating ${meta.rating}` : ''}
+            {/* {meta.verdict || activity.activity_type} */}
+            {meta.rating ? `Rating ${meta.rating}` : ''}
           </p>
         </div>
         {meta.verdict && (
@@ -146,8 +146,12 @@ export function PlatformActivitySection({
   platform,
   title,
 }: PlatformActivitySectionProps) {
-  const [isExpanded, setIsExpanded] = useState(platform === 'github')
   const hasActivity = activities.length > 0
+  const [isExpanded, setIsExpanded] = useState(hasActivity)
+
+  useEffect(() => {
+    setIsExpanded(hasActivity)
+  }, [hasActivity])
 
   return (
     <div

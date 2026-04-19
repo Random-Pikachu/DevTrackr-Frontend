@@ -136,7 +136,7 @@ function IntegrationRow({
         </div>
       </div>
 
-      {isConnected && connectedHandle && (
+      {isConnected && connectedHandle && !onHandleChange && (
         <div
           className="mono mt-3"
           style={{
@@ -233,7 +233,7 @@ export function SettingsDialog({
     void fetchActiveIntegrationsForUser(profileUser.id)
       .then(setIntegrations)
       .catch((e) => setError(e instanceof Error ? e.message : 'Unable to load integrations.'))
-  }, [initialProfileDraft.codeforcesId, initialProfileDraft.leetcodeId, isOpen, profileUser])
+  }, [isOpen])
 
   useEffect(() => {
     if (!isOpen) return
@@ -342,7 +342,7 @@ export function SettingsDialog({
       <div
         className="dt-scrollbar w-full overflow-y-auto animate-fade-up"
         style={{
-          maxWidth: 560,
+          maxWidth: 800,
           maxHeight: 'calc(100vh - 64px)',
           background: '#0a0a0a',
           border: '1px solid rgba(255,255,255,0.08)',

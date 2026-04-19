@@ -5,18 +5,15 @@ import { ActivityDetailsSection } from '../components/profile/ActivityDetailsSec
 import { SettingsDialog } from '../components/profile/SettingsDialog'
 import logoMark from '../assets/devtrackr-mark.svg'
 import {
+  fetchUserActivitiesForDate,
   fetchUserProfileByUsername,
+  fetchYearHeatmapForUser,
   refreshAggregateForUser,
 } from '../lib/backend'
-import {
-  HEATMAP_DATA,
-  YEAR_STATS,
-  getActivitiesForDate,
-  type ActivityEntry,
-} from '../data/dummyData'
 import type {
   AuthSession,
   BackendActivity,
+  BackendHeatmapDay,
   BackendUser,
   ProfileDraft,
 } from '../types/app'
@@ -30,33 +27,6 @@ type ProfilePageProps = {
   authSession: AuthSession
 }
 
-function dummyToBackendActivity(entry: ActivityEntry, date: string): BackendActivity {
-  if (entry.platform === 'github') {
-    return {
-      id: `gh-${date}-${entry.repo}`,
-      user_id: 'dummy', integration_id: 'gh', platform: 'github',
-      activity_date: date, activity_type: 'push',
-      fetched_at: new Date().toISOString(),
-      metadata: { repo: entry.repo, commit_count: entry.commits, messages: entry.messages },
-    }
-  }
-  if (entry.platform === 'leetcode') {
-    return {
-      id: `lc-${date}-${entry.titleSlug}`,
-      user_id: 'dummy', integration_id: 'lc', platform: 'leetcode',
-      activity_date: date, activity_type: 'accepted',
-      fetched_at: new Date().toISOString(),
-      metadata: { problem_name: entry.title, title: entry.title, title_slug: entry.titleSlug, difficulty: entry.difficulty, status: entry.status },
-    }
-  }
-  return {
-    id: `cf-${date}-${entry.problem}`,
-    user_id: 'dummy', integration_id: 'cf', platform: 'codeforces',
-    activity_date: date, activity_type: entry.verdict,
-    fetched_at: new Date().toISOString(),
-    metadata: { problem_name: entry.problem, verdict: entry.verdict, rating: entry.rating, tags: entry.tags },
-  }
-}
 
 function heatClass(count: number) {
   if (!count) return 'heat-empty'
@@ -65,8 +35,6 @@ function heatClass(count: number) {
   if (count >= 2) return 'heat-level-2'
   return 'heat-level-1'
 }
-
-const DEFAULT_DATE = '2025-04-14'
 
 export function ProfilePage({
   onLogout,
@@ -87,10 +55,11 @@ export function ProfilePage({
   const [error, setError] = useState<string | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
-  const [selectedDate, setSelectedDate] = useState<string>(DEFAULT_DATE)
-  const [activities, setActivities] = useState<BackendActivity[]>(() =>
-    getActivitiesForDate(DEFAULT_DATE).map((e) => dummyToBackendActivity(e, DEFAULT_DATE))
-  )
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [activities, setActivities] = useState<BackendActivity[]>([])
+  const [isActivitiesLoading, setIsActivitiesLoading] = useState(false)
+  const [activitiesError, setActivitiesError] = useState<string | null>(null)
+  const [heatmapDays, setHeatmapDays] = useState<BackendHeatmapDay[]>([])
   const [tooltip, setTooltip] = useState<{ x: number; y: number; date: string; total: number } | null>(null)
   const activityRef = useRef<HTMLDivElement>(null)
 
@@ -104,46 +73,87 @@ export function ProfilePage({
   const isUserNotFound = !isLoading && !profileUser && (normalizedError.includes('not found') || normalizedError.includes('unable to fetch'))
   const isPrivateForViewer = Boolean(profileUser) && profileUser?.profilePublic !== true && !canManageProfile
 
-  const yearRange = useMemo(() => ({
-    startDate: new Date(2025, 0, 1),
-    endDate: new Date(2025, 11, 31),
-    label: 2025,
-  }), [])
+  const yearRange = useMemo(() => {
+    const currentYear = new Date().getFullYear()
+    return {
+      startKey: `${currentYear}-01-01`,
+      endKey: `${currentYear}-12-31`,
+      startDate: new Date(currentYear, 0, 1),
+      endDate: new Date(currentYear, 11, 31),
+      label: currentYear,
+    }
+  }, [])
 
   useEffect(() => {
     if (!requestedUsername) { setIsLoading(false); return }
     let active = true
-    setIsLoading(true); setError(null); setProfileUser(null)
+    setIsLoading(true); setError(null); setProfileUser(null);
+    setHeatmapDays([]); setActivities([]); setSelectedDate(null);
     void fetchUserProfileByUsername(requestedUsername)
       .then(async (user) => {
         if (!active) return
         if (!user) throw new Error('User not found.')
         setProfileUser(user)
         if (canManageProfile || user.profilePublic) {
-          await refreshAggregateForUser(user.id).catch(() => {})
+          await refreshAggregateForUser(user.id).catch(() => { })
+          const heatmap = await fetchYearHeatmapForUser(user.id, yearRange.startKey, yearRange.endKey)
+          if (active) setHeatmapDays(heatmap?.days || [])
         }
       })
       .catch((err) => { if (active) setError(err instanceof Error ? err.message : 'Unable to load profile.') })
       .finally(() => { if (active) setIsLoading(false) })
     return () => { active = false }
-  }, [requestedUsername])
+  }, [requestedUsername, canManageProfile, yearRange.startKey, yearRange.endKey])
 
   const heatmapValues = useMemo(() => {
+    const totalsByDate = new Map(heatmapDays.map((day) => [day.date, day.total_contributions ?? 0]))
     const values: Array<{ date: Date; dateKey: string; count: number; total: number }> = []
     for (let cursor = new Date(yearRange.startDate); cursor <= yearRange.endDate; cursor.setDate(cursor.getDate() + 1)) {
       const localDate = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate())
       const dateKey = toDateKey(localDate)
-      const total = HEATMAP_DATA.get(dateKey)?.total ?? 0
+      const total = totalsByDate.get(dateKey) ?? 0
       values.push({ date: localDate, dateKey, count: total, total })
     }
     return values
-  }, [yearRange])
+  }, [heatmapDays, yearRange])
+
+  const loadActivitiesForDate = async (userId: string, date: string) => {
+    setSelectedDate(date)
+    setIsActivitiesLoading(true)
+    setActivitiesError(null)
+    try {
+      const resp = await fetchUserActivitiesForDate(userId, date)
+      setActivities(resp as unknown as BackendActivity[])
+    } catch (err) {
+      setActivitiesError(err instanceof Error ? err.message : 'Unable to load activities for this date.')
+      setActivities([])
+    } finally {
+      setIsActivitiesLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (isLoading || isPrivateForViewer || !profileUser?.id || selectedDate) return
+    const today = new Date().toISOString().slice(0, 10)
+    void loadActivitiesForDate(profileUser.id, today)
+  }, [isLoading, isPrivateForViewer, profileUser?.id, selectedDate])
 
   const handleDayClick = (date: string) => {
-    setSelectedDate(date)
-    setActivities(getActivitiesForDate(date).map((e) => dummyToBackendActivity(e, date)))
+    if (!profileUser?.id) return
+    void loadActivitiesForDate(profileUser.id, date)
     setTimeout(() => activityRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80)
   }
+
+  const stats = useMemo(() => {
+    let activeDays = 0, totalGH = 0, totalLC = 0, totalCF = 0
+    for (const day of heatmapDays) {
+      if ((day.total_contributions || 0) > 0) activeDays++
+      totalGH += day.github_commits || 0
+      totalLC += (day.lc_easy_solved || 0) + (day.lc_medium_solved || 0) + (day.lc_hard_solved || 0)
+      totalCF += day.cf_problems_solved || 0
+    }
+    return { activeDays, totalGH, totalLC, totalCF }
+  }, [heatmapDays])
 
   const refreshProfileState = async (nextUsername?: string) => {
     const routeUsername = nextUsername || requestedUsername
@@ -156,13 +166,13 @@ export function ProfilePage({
   }
 
   const displayName = profileUser?.publicSlug || profileUser?.username || requestedUsername
-  const formattedDate = new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  const formattedDate = !selectedDate ? '' : new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 
   return (
     <div style={{ minHeight: '100vh', background: '#000' }}>
       {/* Header */}
       <header style={{ position: 'sticky', top: 0, zIndex: 40, borderBottom: '1px solid rgba(255,255,255,0.06)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', background: 'rgba(0,0,0,0.82)' }}>
-        <div className="mx-auto flex items-center justify-between px-6" style={{ maxWidth: 900, height: 52 }}>
+        <div className="mx-auto flex items-center justify-between px-6" style={{ maxWidth: 1040, height: 56 }}>
           <a href="/" className="flex items-center gap-2">
             <div className="flex items-center justify-center rounded-md" style={{ width: 22, height: 22, background: '#fff' }}>
               <img src={logoMark} alt="" style={{ width: 12, height: 12 }} />
@@ -182,18 +192,18 @@ export function ProfilePage({
         </div>
       </header>
 
-      <main className="mx-auto px-6 py-12" style={{ maxWidth: 900 }}>
+      <main className="mx-auto px-6 py-14" style={{ maxWidth: 1040 }}>
         {isUserNotFound && (
           <div className="animate-fade-up card" style={{ padding: '28px 24px', borderRadius: 12 }}>
-            <span className="section-label">404</span>
-            <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.03em', color: '#fff', marginTop: 12 }}>Profile not found</h2>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 6, lineHeight: 1.6 }}>No profile at /@{requestedUsername}.</p>
+            <span className="section-label" style={{ fontSize: 13 }}>404</span>
+            <h2 style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: '#fff', marginTop: 12 }}>Profile not found</h2>
+            <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.4)', marginTop: 8, lineHeight: 1.6 }}>No profile at /@{requestedUsername}.</p>
           </div>
         )}
         {isPrivateForViewer && (
           <div className="animate-fade-up card" style={{ padding: '28px 24px', borderRadius: 12 }}>
-            <span className="section-label">Private</span>
-            <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.03em', color: '#fff', marginTop: 12 }}>This profile is private</h2>
+            <span className="section-label" style={{ fontSize: 13 }}>Private</span>
+            <h2 style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: '#fff', marginTop: 12 }}>This profile is private</h2>
           </div>
         )}
 
@@ -201,53 +211,57 @@ export function ProfilePage({
           <>
             {/* Heading */}
             <div className="animate-fade-up mb-8">
-              <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 700, letterSpacing: '-0.04em', color: '#fff', lineHeight: 1.1 }}>
+              <h1 style={{ fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 700, letterSpacing: '-0.04em', color: '#fff', lineHeight: 1.1 }}>
                 @{displayName}
               </h1>
-              <p className="mono" style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 5 }}>
-                {yearRange.label} · {YEAR_STATS.activeDays} active days
+              <p className="mono" style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 6 }}>
+                {yearRange.label} · {stats.activeDays} active days
               </p>
             </div>
 
             {/* Stats row */}
             <div className="animate-fade-up mb-6 grid grid-cols-2 gap-3 md:grid-cols-4" style={{ animationDelay: '50ms' }}>
               {[
-                { label: 'Active days',    value: YEAR_STATS.activeDays },
-                { label: 'GitHub commits', value: YEAR_STATS.totalGH },
-                { label: 'LC solved',      value: YEAR_STATS.totalLC },
-                { label: 'CF solved',      value: YEAR_STATS.totalCF },
+                { label: 'Active days', value: stats.activeDays },
+                { label: 'GitHub commits', value: stats.totalGH },
+                { label: 'LC solved', value: stats.totalLC },
+                { label: 'CF solved', value: stats.totalCF },
               ].map((stat) => (
-                <div key={stat.label} className="card" style={{ padding: '14px 16px', borderRadius: 10 }}>
-                  <p className="mono" style={{ fontSize: 22, fontWeight: 600, color: '#fff', letterSpacing: '-0.04em' }}>
+                <div key={stat.label} className="card" style={{ padding: '16px 18px', borderRadius: 12 }}>
+                  <p className="mono" style={{ fontSize: 26, fontWeight: 600, color: '#fff', letterSpacing: '-0.04em' }}>
                     {stat.value > 999 ? `${(stat.value / 1000).toFixed(1)}k` : stat.value}
                   </p>
-                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 3 }}>{stat.label}</p>
+                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>{stat.label}</p>
                 </div>
               ))}
             </div>
 
+            <p className="mt-8 mb-3 text-xs text-white/45">
+              * In heatmap, color intensity is based on GitHub commits and correct submissions on LeetCode & Codeforces.
+            </p>
+
             {/* Heatmap */}
-            <div className="animate-fade-up card mb-5" style={{ borderRadius: 12, overflow: 'hidden', animationDelay: '90ms' }}>
+            <div className="animate-fade-up card mb-5" style={{ borderRadius: 14, overflow: 'hidden', animationDelay: '90ms' }}>
               <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <span className="section-label">Contribution heatmap — {yearRange.label}</span>
                 <div className="flex items-center gap-1.5">
                   <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.22)', fontFamily: 'var(--font-mono)' }}>Less</span>
-                  {['#111111','#1e3a2f','#1e6040','#26a05a','#3dd68c'].map(c => (
+                  {['#111111', '#1e3a2f', '#1e6040', '#26a05a', '#3dd68c'].map(c => (
                     <span key={c} style={{ width: 10, height: 10, borderRadius: 2, background: c, display: 'inline-block' }} />
                   ))}
                   <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.22)', fontFamily: 'var(--font-mono)' }}>More</span>
                 </div>
               </div>
 
-              <div className="heatmap-shell overflow-x-auto px-5 py-6">
-                <div style={{ minWidth: 720 }}>
+              <div className="heatmap-shell overflow-x-auto px-6 py-8">
+                <div style={{ minWidth: 840 }}>
                   <CalendarHeatmap
                     classForValue={(value) => heatClass(value?.count ?? 0)}
                     endDate={yearRange.endDate}
-                    gutterSize={3}
-                    monthLabels={['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']}
+                    gutterSize={4}
+                    monthLabels={['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']}
                     showWeekdayLabels
-                    startDate={yearRange.startDate}
+                    startDate={new Date(yearRange.startDate.getTime() - 86400000)}
                     onMouseLeave={() => setTooltip(null)}
                     onMouseOver={(event, value) => {
                       if (!value?.date || typeof value.dateKey !== 'string') { setTooltip(null); return }
@@ -259,38 +273,40 @@ export function ProfilePage({
                       handleDayClick(value.dateKey)
                     }}
                     values={heatmapValues}
-                    weekdayLabels={['Sun','','Tue','','Thu','','Sat']}
+                    weekdayLabels={['Sun', '', 'Tue', '', 'Thu', '', 'Sat']}
                   />
                 </div>
               </div>
 
-              <div className="px-5 py-2.5 flex items-center justify-between" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.01)' }}>
-                <p className="mono" style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>GitHub + LeetCode + Codeforces</p>
-                <p className="mono" style={{ fontSize: 10, color: 'rgba(255,255,255,0.16)' }}>hover to preview · click to inspect</p>
+              <div className="px-6 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.01)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <p className="mono" style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>GitHub + LeetCode + Codeforces</p>
+                <p className="mono" style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>hover to preview · click to inspect</p>
               </div>
             </div>
 
+            <p className="mt-2 mb-8 text-right text-[11px] leading-5 text-white/40">
+              (For some historical data, LeetCode&apos;s public API does not expose solved questions,
+              so we use an alternate method to at least estimate submission count.)
+            </p>
+
             {/* Activity section */}
-            <div ref={activityRef} className="animate-fade-up card" style={{ padding: '22px', borderRadius: 12, animationDelay: '130ms' }}>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2.5">
-                  <h2 style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.025em', color: '#fff' }}>Day details</h2>
-                  <span className="mono" style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', padding: '2px 8px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 5, background: 'rgba(255,255,255,0.02)' }}>
-                    {formattedDate}
-                  </span>
-                  {activities.length > 0 && (
-                    <span className="mono" style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', padding: '2px 8px', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 5 }}>
-                      {activities.length} {activities.length === 1 ? 'entry' : 'entries'}
+            <div ref={activityRef} className="animate-fade-up card" style={{ padding: '28px', borderRadius: 14, animationDelay: '130ms' }}>
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <h2 style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.025em', color: '#fff' }}>Day details</h2>
+                  {formattedDate && (
+                    <span className="mono" style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', padding: '2px 8px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 5, background: 'rgba(255,255,255,0.02)' }}>
+                      {formattedDate}
                     </span>
                   )}
                 </div>
                 <input
                   className="dt-input mono"
                   style={{ width: 148, fontSize: 11 }}
-                  max="2025-12-31" min="2025-01-01"
+                  max={new Date().toISOString().slice(0, 10)}
                   onChange={(e) => { if (e.target.value) handleDayClick(e.target.value) }}
                   type="date"
-                  value={selectedDate}
+                  value={selectedDate || ''}
                 />
               </div>
 
@@ -299,16 +315,15 @@ export function ProfilePage({
               ) : (
                 <ActivityDetailsSection
                   activities={activities}
-                  error={null}
-                  isLoading={false}
+                  error={activitiesError}
+                  isLoading={isActivitiesLoading}
                   selectedDate={selectedDate}
-                  onSelectedDateChange={handleDayClick}
                 />
               )}
             </div>
 
             <p className="mono mt-4 text-right" style={{ fontSize: 10, color: 'rgba(255,255,255,0.14)' }}>
-              Dummy dataset · refreshed {new Date().toLocaleString()}
+              Refreshed {new Date().toLocaleString()}
             </p>
           </>
         )}

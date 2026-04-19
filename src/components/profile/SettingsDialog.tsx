@@ -30,6 +30,10 @@ type SettingsDialogProps = {
   profileUser: BackendUser
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
 // ─── Toggle ──────────────────────────────────────────────────────────────────
 function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
@@ -244,8 +248,20 @@ export function SettingsDialog({
 
     void fetchActiveIntegrationsForUser(profileUser.id)
       .then(setIntegrations)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Unable to load integrations.'))
-  }, [isOpen])
+      .catch((error) => setError(getErrorMessage(error, 'Unable to load integrations.')))
+  }, [
+    initialProfileDraft.codeforcesId,
+    initialProfileDraft.leetcodeId,
+    isOpen,
+    profileUser.codeforcesHandle,
+    profileUser.digestTime,
+    profileUser.emailOptIn,
+    profileUser.id,
+    profileUser.leetcodeHandle,
+    profileUser.profilePublic,
+    profileUser.publicSlug,
+    profileUser.username,
+  ])
 
   useEffect(() => {
     if (!isOpen) return
@@ -315,8 +331,8 @@ export function SettingsDialog({
       await requestPasswordSetupCode(profileUser.email)
       setSetupPasswordMode('otp')
       setMsg('Verification code sent to your email.')
-    } catch (err: any) {
-      setSetupError(err.message || 'Failed to send code.')
+    } catch (error) {
+      setSetupError(getErrorMessage(error, 'Failed to send code.'))
     } finally { setIsSettingPassword(false) }
   }
 
@@ -331,8 +347,8 @@ export function SettingsDialog({
       setSetupCode('')
       setSetupNewPassword('')
       toast.success('You can now login using either GitHub or Email + Password.')
-    } catch (err: any) {
-      setSetupError(err.message || 'Failed to verify code.')
+    } catch (error) {
+      setSetupError(getErrorMessage(error, 'Failed to verify code.'))
     } finally { setIsSettingPassword(false) }
   }
 

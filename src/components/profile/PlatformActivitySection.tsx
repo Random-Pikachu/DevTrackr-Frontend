@@ -52,7 +52,7 @@ function CodeforcesEntry({ activity }: { activity: BackendActivity }) {
   const meta = activity.metadata || {}
   const tags: string[] = meta.tags || []
 
-  return (
+  return (                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
     <div style={{ padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
       <div className="flex items-start justify-between gap-4">
         <div>

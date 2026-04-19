@@ -1,4 +1,8 @@
-export function ClosingSection() {
+type ClosingSectionProps = {
+  onGetStarted: () => void
+}
+
+export function ClosingSection({ onGetStarted }: ClosingSectionProps) {
   return (
     <section className="border-t border-white/10 px-6 py-32 md:px-8" id="launchpad">
       <div className="mx-auto max-w-5xl text-center">
@@ -13,12 +17,13 @@ export function ClosingSection() {
           competitive programming. DevTrackr brings those signals together so
           consistency becomes visible and easier to maintain.
         </p>
-        <a
+        <button
           className="inline-flex min-h-14 items-center justify-center rounded-full bg-white px-10 py-4 text-base font-semibold !text-black transition hover:bg-white/90"
-          href="#top"
+          onClick={onGetStarted}
+          type="button"
         >
           Start tracking your habit
-        </a>
+        </button>
       </div>
     </section>
   )

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { X, Check, AlertCircle } from 'lucide-react'
+import { X, AlertCircle } from 'lucide-react'
+import toast from 'react-hot-toast'
 import {
   createIntegrationForUser,
   disconnectIntegrationForUser,
@@ -8,6 +9,8 @@ import {
   updateEmailOptInForUser,
   updateProfilePublicForUser,
   updateUsernameForUser,
+  requestPasswordSetupCode,
+  confirmPasswordSetup,
 } from '../../lib/backend'
 import type {
   AuthSession,
@@ -210,8 +213,17 @@ export function SettingsDialog({
   const [isSavingPrivacy, setIsSavingPrivacy] = useState(false)
   const [isSavingNotifications, setIsSavingNotifications] = useState(false)
   const [busyIntegration, setBusyIntegration] = useState<string | null>(null)
-  const [feedback, setFeedback] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // OTP set-password flow
+  const [setupPasswordMode, setSetupPasswordMode] = useState<'idle' | 'otp' | 'success'>('idle')
+  const [setupCode, setSetupCode] = useState('')
+  const [setupNewPassword, setSetupNewPassword] = useState('')
+  const [setupError, setSetupError] = useState<string | null>(null)
+  const [isSettingPassword, setIsSettingPassword] = useState(false)
+  const [passwordSetLocally, setPasswordSetLocally] = useState(false)
+
+  const hasPasswordSet = authSession.passwordSet || passwordSetLocally
 
   const githubIntegration = useMemo(() => integrations.find((i) => i.platform === 'github'), [integrations])
   const leetcodeIntegration = useMemo(() => integrations.find((i) => i.platform === 'leetcode'), [integrations])
@@ -227,7 +239,7 @@ export function SettingsDialog({
     setDigestTime(profileUser.digestTime || '20:00')
     setLeetcodeHandle(initialProfileDraft.leetcodeId || profileUser.leetcodeHandle || '')
     setCodeforcesHandle(initialProfileDraft.codeforcesId || profileUser.codeforcesHandle || '')
-    setFeedback(null)
+
     setError(null)
 
     void fetchActiveIntegrationsForUser(profileUser.id)
@@ -249,13 +261,13 @@ export function SettingsDialog({
     onDraftChange({ ...initialProfileDraft, ...overrides })
   }
 
-  const setMsg = (msg: string) => { setFeedback(msg); setError(null) }
-  const setErr = (msg: string) => { setError(msg); setFeedback(null) }
+  const setMsg = (msg: string) => { toast.success(msg, { duration: 2000 }); setError(null) }
+  const setErr = (msg: string) => { setError(msg) }
 
   const handleSaveUsername = async () => {
     const trimmed = username.trim().replace(/^@+/, '')
     if (!trimmed) { setErr('Username cannot be empty.'); return }
-    setIsSavingUsername(true); setError(null); setFeedback(null)
+    setIsSavingUsername(true); setError(null);
     try {
       await updateUsernameForUser(profileUser.id, trimmed)
       syncDraft({ username: trimmed })
@@ -266,7 +278,7 @@ export function SettingsDialog({
   }
 
   const handleToggleEmailOptIn = async (next: boolean) => {
-    setIsSavingNotifications(true); setError(null); setFeedback(null)
+    setIsSavingNotifications(true); setError(null);
     try {
       await updateEmailOptInForUser(profileUser.id, next)
       setEmailOptIn(next); await onProfileUpdated()
@@ -276,7 +288,7 @@ export function SettingsDialog({
   }
 
   const handleTogglePublicProfile = async (next: boolean) => {
-    setIsSavingPrivacy(true); setError(null); setFeedback(null)
+    setIsSavingPrivacy(true); setError(null);
     try {
       await updateProfilePublicForUser(profileUser.id, next)
       setIsPublicProfile(next); await onProfileUpdated()
@@ -287,13 +299,41 @@ export function SettingsDialog({
 
   const handleSaveDigestTime = async () => {
     if (!digestTime) { setErr('Choose a digest time first.'); return }
-    setIsSavingNotifications(true); setError(null); setFeedback(null)
+    setIsSavingNotifications(true); setError(null);
     try {
       await updateDigestTimeForUser(profileUser.id, digestTime)
       await onProfileUpdated()
       setMsg('Digest time updated.')
     } catch (e) { setErr(e instanceof Error ? e.message : 'Unable to update digest time.') }
     finally { setIsSavingNotifications(false) }
+  }
+
+  const handleRequestPasswordSetup = async () => {
+    if (!profileUser.email) { setSetupError('No email linked.'); return }
+    setIsSettingPassword(true); setSetupError(null)
+    try {
+      await requestPasswordSetupCode(profileUser.email)
+      setSetupPasswordMode('otp')
+      setMsg('Verification code sent to your email.')
+    } catch (err: any) {
+      setSetupError(err.message || 'Failed to send code.')
+    } finally { setIsSettingPassword(false) }
+  }
+
+  const handleConfirmPasswordSetup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!profileUser.email) return
+    setIsSettingPassword(true); setSetupError(null)
+    try {
+      await confirmPasswordSetup(profileUser.email, setupCode, setupNewPassword)
+      setSetupPasswordMode('idle')
+      setPasswordSetLocally(true)
+      setSetupCode('')
+      setSetupNewPassword('')
+      toast.success('You can now login using either GitHub or Email + Password.')
+    } catch (err: any) {
+      setSetupError(err.message || 'Failed to verify code.')
+    } finally { setIsSettingPassword(false) }
   }
 
   const reloadIntegrations = async () => {
@@ -305,7 +345,7 @@ export function SettingsDialog({
     const trimmed = handle.trim()
     if (!trimmed) { setErr(`Enter your ${platform} handle first.`); return }
     const current = platform === 'leetcode' ? leetcodeIntegration : codeforcesIntegration
-    setBusyIntegration(platform); setError(null); setFeedback(null)
+    setBusyIntegration(platform); setError(null);
     try {
       if (current && current.handle.toLowerCase() !== trimmed.toLowerCase()) {
         await disconnectIntegrationForUser(current.id)
@@ -320,7 +360,7 @@ export function SettingsDialog({
   }
 
   const handleDisconnectIntegration = async (integration: BackendIntegration) => {
-    setBusyIntegration(integration.platform); setError(null); setFeedback(null)
+    setBusyIntegration(integration.platform); setError(null);
     try {
       await disconnectIntegrationForUser(integration.id)
       if (integration.platform === 'leetcode') { setLeetcodeHandle(''); syncDraft({ leetcodeId: '' }) }
@@ -384,15 +424,7 @@ export function SettingsDialog({
               {error}
             </div>
           )}
-          {feedback && (
-            <div
-              className="mb-5 flex items-center gap-2.5 rounded-lg px-3.5 py-3"
-              style={{ border: '1px solid rgba(52,211,153,0.2)', background: 'rgba(52,211,153,0.07)', fontSize: 12, color: 'rgba(100,230,180,0.9)' }}
-            >
-              <Check size={13} style={{ flexShrink: 0 }} />
-              {feedback}
-            </div>
-          )}
+
 
           {/* Account */}
           <Section title="Account">
@@ -531,6 +563,69 @@ export function SettingsDialog({
               isBusy={busyIntegration === 'codeforces'}
               inputPlaceholder="tourist"
             />
+          </Section>
+
+          {/* Security */}
+          <Section title="Security">
+            <div style={{ padding: '16px', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, background: 'rgba(255,255,255,0.015)' }}>
+              {setupPasswordMode === 'idle' ? (
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>
+                    {hasPasswordSet ? 'Change Password' : 'Email Login'}
+                  </p>
+                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 4, lineHeight: 1.5 }}>
+                    {hasPasswordSet
+                      ? 'Update your current password. A verification code will be sent to your email.'
+                      : 'Set a password to enable logging in with your email in addition to GitHub.'}
+                  </p>
+                  <button
+                    className="btn-ghost"
+                    style={{ marginTop: 12, height: 32, fontSize: 12 }}
+                    onClick={() => void handleRequestPasswordSetup()}
+                    disabled={isSettingPassword}
+                    type="button"
+                  >
+                    {isSettingPassword ? 'Sending OTP…' : hasPasswordSet ? 'Change Password' : 'Set Password'}
+                  </button>
+                  {setupError && <p style={{ fontSize: 12, color: '#f87171', marginTop: 8 }}>{setupError}</p>}
+                </div>
+              ) : (
+                <form onSubmit={handleConfirmPasswordSetup}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>Verify your Email</p>
+                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 4, lineHeight: 1.5, marginBottom: 16 }}>
+                    Check your inbox and enter the 6-digit verification code sent to {profileUser.email}.
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <input
+                      type="text"
+                      className="dt-input"
+                      placeholder="6-digit code"
+                      value={setupCode}
+                      onChange={e => setSetupCode(e.target.value)}
+                      required
+                    />
+                    <input
+                      type="password"
+                      className="dt-input"
+                      placeholder="New password"
+                      value={setupNewPassword}
+                      onChange={e => setSetupNewPassword(e.target.value)}
+                      minLength={6}
+                      required
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 mt-4">
+                    <button type="submit" className="btn-primary" style={{ height: 32, fontSize: 12 }} disabled={isSettingPassword}>
+                      {isSettingPassword ? 'Verifying…' : 'Confirm'}
+                    </button>
+                    <button type="button" className="btn-ghost" style={{ height: 32, fontSize: 12 }} onClick={() => setSetupPasswordMode('idle')} disabled={isSettingPassword}>
+                      Cancel
+                    </button>
+                  </div>
+                  {setupError && <p style={{ fontSize: 12, color: '#f87171', marginTop: 8 }}>{setupError}</p>}
+                </form>
+              )}
+            </div>
           </Section>
         </div>
       </div>

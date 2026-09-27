@@ -139,7 +139,7 @@ export type BackendIntegrationRecord = {
   user_id: string
   platform: 'github' | 'leetcode' | 'codeforces'
   handle: string
-  access_token?: BackendNullableString
+  has_token?: boolean
   is_active: boolean
   last_synced_at?: BackendNullableString
   created_at: string

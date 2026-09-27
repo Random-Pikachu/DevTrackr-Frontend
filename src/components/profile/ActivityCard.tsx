@@ -35,7 +35,11 @@ export function ActivityCard({ activity }: ActivityCardProps) {
 
   if (activity.platform === 'github') {
     const messages = metadata.messages || []
-    const repoUrl = buildGitHubRepoUrl(metadata.repo)
+    const isPrivateOrg = metadata.private_org === true
+    const repoUrl = isPrivateOrg ? null : buildGitHubRepoUrl(metadata.repo)
+    const title = isPrivateOrg
+      ? metadata.label || 'Private organization repositories'
+      : metadata.repo || 'Repository activity'
 
     return (
       <article className="rounded-[28px] border border-black/10 bg-white px-5 py-5 shadow-[0_10px_24px_rgba(0,0,0,0.04)]">
@@ -59,13 +63,14 @@ export function ActivityCard({ activity }: ActivityCardProps) {
           </a>
         ) : (
           <h3 className="mt-4 text-xl font-semibold text-black">
-            {metadata.repo || 'Repository activity'}
+            {title}
           </h3>
         )}
 
         <p className="mt-3 text-sm leading-7 text-black/65">
           {metadata.commit_count || 0} commit
           {(metadata.commit_count || 0) === 1 ? '' : 's'} captured on this day.
+          {isPrivateOrg ? ' Repository names and messages are hidden by the organization.' : ''}
         </p>
 
         {messages.length > 0 ? (

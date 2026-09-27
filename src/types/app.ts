@@ -105,6 +105,8 @@ export type BackendHeatmapResponse = {
 
 export type BackendActivityMetadata = {
   repo?: string
+  label?: string
+  private_org?: boolean
   messages?: string[]
   commit_count?: number
   tags?: string[]
